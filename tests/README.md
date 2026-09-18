@@ -23,21 +23,25 @@ Run these after any edit to `assets/`. They take about a minute.
 | An emoji | 🎉 — uncatchable, and the test documents that |
 | A web component | `<ledger-widget>`, with a **shadow root** containing its own font, background and button |
 
-The assets are symlinked into `fixture/`, so the fixture always exercises the current files rather than a stale copy.
+The fixture references `../../assets/` directly, so it always exercises the current files rather than a stale copy. (These were symlinks until the repository went public; symlinks do not survive a Windows checkout.)
 
 ## Running
 
+Serve from the **repository root**, not from the fixture folder — the fixture
+references `../../assets/` so it always exercises the current files rather than a
+stale copy:
+
 ```bash
-python3 -m http.server 8777 --directory ~/.claude/skills/wireframe-it/tests/fixture
+python3 -m http.server 8000 --directory .
 ```
 
-Open `http://localhost:8777`, then in the console:
+Open `http://localhost:8000/tests/fixture/`, then in the console:
 
 ```js
 await wfSelfTest()
 ```
 
-Fifteen assertions, printed as a table. The bar is all pass.
+Sixteen assertions, printed as a table. The bar is all pass.
 
 From a Claude Code session with the browser tools, the same thing in one call:
 
@@ -45,9 +49,10 @@ From a Claude Code session with the browser tools, the same thing in one call:
 const r = await wfSelfTest(); JSON.stringify(r.results.map(x => `${x.pass ? 'PASS' : 'FAIL'} ${x.test} ${x.detail}`))
 ```
 
-If you are in a project whose `.claude/launch.json` you do not mind editing, a `wireframe-fixture` entry
-pointing `python3 -m http.server` at `--directory <this folder>` lets `preview_start` open it directly.
-Worth adding to a scratch project rather than to client work, where it would show up in the diff.
+**Reload before trusting a pass.** The revert assertions only mean anything on a fresh
+page load: an earlier version passed for days while the neutraliser was destroying the
+fixture's inline styles, because the baseline snapshot was taken after a previous toggle
+had already stripped them. The test was comparing damage to damage.
 
 ## What the assertions cover
 
@@ -60,6 +65,7 @@ Worth adding to a scratch project rather than to client work, where it would sho
 | only one corner radius renders, and it is zero | a radius surviving in a shadow root or utility class |
 | rule 7 — WCAG AA contrast | the wireframe becoming unreadable and confounding the session |
 | exactly one non-grey colour renders | a second blue arriving as a hover, on-dark, tint or runtime-derived shade |
+| author inline styles survive a cycle | the revert destroying declarations the prototype's author wrote |
 | exactly one typeface renders | a font leak, including from a shadow root |
 | at most two weights render | a weight leak, including a variable-font axis |
 | reverts exactly | the non-destructive promise, which is the one made to the founder |

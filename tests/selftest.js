@@ -21,6 +21,14 @@
   'use strict';
 
   var CLASS = 'wireframe-mode';
+
+  /* Resolved from this script's own URL rather than the page's, so the
+     fixture can be served from any directory depth without the fetch
+     below silently 404ing and taking four assertions down with it. */
+  var VERIFY_URL = (function () {
+    var me = document.currentScript && document.currentScript.src;
+    return me ? new URL('../assets/verify.js', me).href : '../../assets/verify.js';
+  })();
   var settle = function (ms) { return new Promise(function (r) { setTimeout(r, ms || 400); }); };
 
   function snapshot() {
@@ -106,7 +114,9 @@
         Math.abs(wfHeight - styledHeight) + 'px difference');
 
     // ---------- spec ----------
-    var src = await fetch('verify.js').then(function (r) { return r.text(); });
+    var res = await fetch(VERIFY_URL);
+    if (!res.ok) throw new Error('could not load ' + VERIFY_URL + ' (' + res.status + ')');
+    var src = await res.text();
     var v = eval(src);
     add('rule 1 — greyscale only', v.byRule['1'] === 0, v.byRule['1'] + ' violation(s)');
     add('rule 2 — affordances read', v.byRule['2'] === 0, v.byRule['2'] + ' violation(s)');
