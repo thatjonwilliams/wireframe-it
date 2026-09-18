@@ -15,8 +15,10 @@ Reset a styled prototype to a known neutral baseline that still runs, behind a t
 | Interaction | `#2563EB`, on interactive elements and nothing else | Rule 2 |
 | Typeface | Helvetica everywhere — headings, body, numerals, code | Rule 3 |
 | Weight | 400 and 700 only, quantised at 600 | Rule 3 |
+| Corners | Right angles — radius removed everywhere | Rule 1b |
+| Contrast | WCAG 2.2 AA: 4.5:1 text, 3:1 large text and controls | Rule 7 |
 | Type scale | **Unchanged** | Rule 4 |
-| Layout, spacing, radii, borders, shadows | **Unchanged**, resolved to grey | Rule 4 |
+| Layout, spacing, borders, shadows | **Unchanged**, resolved to grey | Rule 4 |
 | Imagery | Labelled grey block at the original dimensions | Rule 5 |
 | Behaviour, routes, states | **Unchanged** and fully working | Rule 6 |
 
@@ -44,6 +46,16 @@ These are deliberately tight. The output should read as a systematic transformat
 White, black, and greys in between. Backgrounds, text, borders, dividers, shadows, icons, chart fills, avatars, badges. Map each original colour to a grey of roughly equivalent lightness so the original contrast relationships survive. Do not flatten everything to one grey; a wireframe with no tonal structure is as useless as one with too much colour.
 
 The ramp in `assets/wireframe.css` gives you ten steps. Use it rather than inventing values.
+
+### 1b. Right angles
+
+Corner radius is removed. Everything is square: containers, cards, buttons, inputs, badges, chips, avatars, round icon buttons.
+
+This is the one structural property the reset takes away, and it is a deliberate exception to rule 4. Radius is never a decision in a generated prototype — it arrives at 8 or 10 or 12 pixels from whatever component library the model had in mind, gets applied uniformly to things with nothing in common, and does more than anything else to make an unfinished product read as finished. A rounded card looks considered. A square one looks like a box with something in it, which is what it is.
+
+It costs nothing that rule 4 protects: a square card occupies exactly the same box as a rounded one, so nothing moves. The self-test still holds geometry to within a pixel with this in force.
+
+Applied to everything rather than to a list of containers. Pills, badges, avatars and round icon buttons are the same decision at different sizes, and squaring the containers while leaving the circles reads as an oversight rather than a rule.
 
 ### 2. One blue, and only for things you can click
 
@@ -75,11 +87,11 @@ Toggle chrome is exempt and keeps its own face. Review tooling that matches the 
 
 ### 4. Structure is preserved
 
-Layout, spacing, corner radii, borders, rules, dividers, shadows, component composition, breakpoints. All of it stays as the prototype has it, resolved to greyscale. The wireframe should be recognisable as the same product, screen for screen.
+Layout, spacing, borders, rules, dividers, shadows, component composition, breakpoints. All of it stays as the prototype has it, resolved to greyscale. The wireframe should be recognisable as the same product, screen for screen.
 
 This is what separates the exercise from a redesign. You are subtracting one variable so the rest can be judged. Start moving things around and you have confounded the experiment; no finding from the session can then be attributed to anything.
 
-One exception, and it is forced by rule 3: **a typeface has metrics, so text boxes change width.** Replacing the prototype's font with Helvetica is not free. On the test fixture the `h1` text box narrows by 11px. What must not change is vertical position: a line wrapping where it did not before genuinely alters the page being judged, whereas a text box being a few pixels narrower is invisible to a reviewer.
+Two exceptions. Corner radius is removed outright — see rule 1b, which costs nothing here because a square box occupies the same space as a rounded one. And one that is forced by rule 3: **a typeface has metrics, so text boxes change width.** Replacing the prototype's font with Helvetica is not free. On the test fixture the `h1` text box narrows by 11px. What must not change is vertical position: a line wrapping where it did not before genuinely alters the page being judged, whereas a text box being a few pixels narrower is invisible to a reviewer.
 
 The self-test holds the line in exactly those terms — vertical shift within 2px, document height within 4px, horizontal reflow allowed. If a screen fails it, the usual cause is text that was already one word from wrapping, and the honest fix is to report it rather than to relax the typography.
 
@@ -96,6 +108,26 @@ One mechanical limit worth knowing before you go looking for it: an `<img>` is c
 This is a wireframe, not a picture of one. Every route, state, form, validation message, loading state, empty state, modal and hover behaviour continues to function. The entire value of doing this in code rather than on a canvas is that a stakeholder can attempt a real task and get stuck in a real place.
 
 If a state is unreachable in the running prototype, say so in the report rather than faking it.
+
+### 7. The wireframe itself meets WCAG 2.2 AA
+
+4.5:1 for body text, 3:1 for large text and for the boundary of a control. Enforced, not hoped for.
+
+Neutralising by luminance preserves the prototype's contrast relationships faithfully, which is right for rule 1 and not sufficient on its own: a faithful map of a bad relationship is still a bad relationship. Measured on the test fixture before this rule existed, **the wireframe failed AA in nine places** — a secondary button at 1.4:1, sidebar navigation at 2.2:1.
+
+That is not a cosmetic defect, it is a broken instrument. The exercise exists to reveal where a design leans on colour to carry meaning. If the wireframe is itself hard to read, every hesitation in the session becomes ambiguous — the participant may have stalled on the structure, or because they could not see the text. The finding is lost either way, and the one it manufactures is worse than none.
+
+`wireframe-neutralise.js` enforces this automatically, in a fixed order of remedy:
+
+1. **Switch the blue variant.** On a dark surface the interaction blue goes to the light variant. This is what the stylesheet's `data-wf-dark` escape does by hand, and what nobody remembers to tag — the fixture's sidebar failed for exactly that reason.
+2. **Lighten the control's surface.** A mid-grey button with a blue label is the common case; lightening the button fixes it and leaves the label alone.
+3. **Adjust the blue itself**, keeping the hue so the element still reads as interactive.
+
+Grey text is fixed by moving the text, not the surface, so the prototype's surfaces stay where the neutraliser put them.
+
+**Rule 2 outranks this rule.** The blue is never traded for a grey to win a contrast argument. If an affordance cannot be made to pass, that is a finding to report, not a thing to paint over.
+
+Two consequences worth expecting. Derived blues are marked `data-wf-blue` so the verifier accepts them and later passes do not grey them — an unmarked derived blue gets neutralised on the next DOM change and the affordance quietly disappears mid-review. And AA here is a floor for the *wireframe*, not a claim about the product: the styled version is a separate question, and one the exercise often raises.
 
 ## Before any of this: can you see the code?
 
@@ -157,7 +189,7 @@ Do not skip this and do not substitute looking at the screen. "It looks greyscal
 
 Turn wireframe mode on and run `assets/verify.js` in the console **on every main screen**. It checks the running page against the specification and reports pass or fail per rule, with the offending elements, outlining the first sixty in magenta so you can see where they are. It walks shadow roots as well as the light DOM.
 
-The bar is zero violations on rules 1, 2, 3 and 5. Anything else is not done.
+The bar is zero violations on rules 1, 1b, 2, 3, 5 and 7. Anything else is not done.
 
 Rules 4 and 6 cannot be checked by a script and the verifier says so rather than printing a green tick it has not earned. Compare screenshots for rule 4; click through for rule 6.
 

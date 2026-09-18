@@ -103,6 +103,8 @@
     add('rule 2 — affordances read', v.byRule['2'] === 0, v.byRule['2'] + ' violation(s)');
     add('rule 3 — Helvetica 400/700', v.byRule['3'] === 0, v.byRule['3'] + ' violation(s)');
     add('rule 5 — imagery replaced', v.byRule['5'] === 0, v.byRule['5'] + ' violation(s)');
+    add('rule 1b — right angles only', v.byRule['1b'] === 0, v.byRule['1b'] + ' violation(s)');
+    add('rule 7 — WCAG AA contrast', v.byRule['7'] === 0, v.byRule['7'] + ' violation(s)');
     if (window.verifyWireframe) window.verifyWireframe.clear();
 
     // ---------- typography, checked directly ----------
@@ -122,6 +124,19 @@
     add('at most two weights render',
         Array.from(weights).every(function (w) { return w === '400' || w === '700'; }),
         Array.from(weights).sort().join(', '));
+
+    // ---------- right angles, checked directly ----------
+    var radii = new Set();
+    (function walk(root) {
+      root.querySelectorAll('*').forEach(function (el) {
+        if (el.closest && el.closest('[data-wf-chrome]')) return;
+        radii.add(getComputedStyle(el).borderRadius);
+        if (el.shadowRoot) walk(el.shadowRoot);
+      });
+    })(document);
+    add('only one corner radius renders, and it is zero',
+        radii.size === 1 && radii.has('0px'),
+        Array.from(radii).slice(0, 4).join(' / '));
 
     // ---------- off ----------
     document.documentElement.classList.remove(CLASS);

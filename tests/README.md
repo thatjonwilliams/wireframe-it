@@ -37,7 +37,7 @@ Open `http://localhost:8777`, then in the console:
 await wfSelfTest()
 ```
 
-Eleven assertions, printed as a table. The bar is all pass.
+Fourteen assertions, printed as a table. The bar is all pass.
 
 From a Claude Code session with the browser tools, the same thing in one call:
 
@@ -56,7 +56,9 @@ Worth adding to a scratch project rather than to client work, where it would sho
 | wireframe mode changes the page | the stylesheet not loading at all |
 | rule 4 — nothing reflows vertically (≤2px) | a change that makes text wrap differently |
 | rule 4 — document height holds (≤4px) | the same, at page scale |
-| rules 1, 2, 3, 5 — zero violations | any override that stops matching |
+| rules 1, 1b, 2, 3, 5, 7 — zero violations | any override that stops matching |
+| only one corner radius renders, and it is zero | a radius surviving in a shadow root or utility class |
+| rule 7 — WCAG AA contrast | the wireframe becoming unreadable and confounding the session |
 | exactly one typeface renders | a font leak, including from a shadow root |
 | at most two weights render | a weight leak, including a variable-font axis |
 | reverts exactly | the non-destructive promise, which is the one made to the founder |
@@ -67,6 +69,15 @@ Worth adding to a scratch project rather than to client work, where it would sho
 Rule 4 originally asserted byte-identical geometry and **failed**. That was a bug in the test, not in the skill: rule 3 replaces the typeface, and a typeface has metrics. Swapping Georgia for Helvetica narrows this fixture's `h1` text box by 11px while moving nothing vertically by more than 1px.
 
 Horizontal text-box width is invisible to a reviewer. A line wrapping where it did not before is not — it changes the page being judged. So the test holds vertical position and document height, and allows horizontal reflow.
+
+## The other measurement worth keeping
+
+Before rule 7 existed, the wireframe **failed WCAG AA in nine places on this fixture** — a secondary button at 1.4:1, sidebar navigation at 2.2:1, and three more that missed 4.5 by a hundredth. The contrast pass takes it to zero.
+
+Two regressions were caught here and are worth knowing about, because both were silent:
+
+- Solving for the exact contrast ratio and rounding to an integer sRGB channel lands *just* under the target. Three elements came out at 4.49 against 4.5 — fine to the eye, failing to an auditor. The solver now verifies after rounding and steps until it genuinely clears.
+- A blue derived to clear a contrast threshold is not one of the stylesheet's four blues, so the next neutralise pass greyed it, and the contrast pass was then satisfied because grey-on-light passes contrast perfectly well. The affordance disappeared on the next DOM change. Derived blues now carry `data-wf-blue`, and the verifier skips `color` plus every property that defaults to `currentColor` on those elements — `column-rule-color` was the one that actually bit.
 
 ## The measurement worth keeping
 

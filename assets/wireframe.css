@@ -148,6 +148,39 @@ html.wireframe-mode [data-wf-regular] {
 }
 
 /* ------------------------------------------------------------
+   1b. Right angles
+   Corner radius is removed, not preserved.
+
+   This is the one structural property the reset takes away, and
+   it is a deliberate exception to rule 4. Radius is never a
+   decision in a generated prototype: it arrives at 8 or 10 or 12
+   pixels from whatever component library the model had in mind,
+   it is applied uniformly to things that have nothing in common,
+   and it does more than anything else to make an unfinished
+   product read as finished. A rounded card looks considered. A
+   square one looks like a box with something in it, which is
+   what it is.
+
+   Removing it costs nothing that rule 4 is protecting. Position,
+   size, spacing and grouping are all untouched — a square card
+   occupies exactly the same box as a rounded one, which is why
+   this does not move the layout and the self-test still holds
+   geometry to within a pixel.
+
+   Applied to everything rather than to a list of containers:
+   pills, chips, badges, avatars and round icon buttons are all
+   the same decision wearing different sizes, and leaving circles
+   in place while squaring their containers looks like an
+   oversight rather than a rule.
+   ------------------------------------------------------------ */
+
+html.wireframe-mode *,
+html.wireframe-mode *::before,
+html.wireframe-mode *::after {
+  border-radius: 0 !important;
+}
+
+/* ------------------------------------------------------------
    2. Common design-token names
    Most prototypes (and every shadcn/ui app) express colour as
    custom properties. Overriding them here reaches the majority

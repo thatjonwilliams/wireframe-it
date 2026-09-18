@@ -213,7 +213,10 @@
     var computed = getComputedStyle(el);
     var wrote = false;
 
+    var keepsBlue = el.hasAttribute('data-wf-blue');
+
     for (var i = 0; i < PROPS.length; i++) {
+      if (keepsBlue && PROPS[i] === 'color') continue;
       var next = neutraliseValue(computed.getPropertyValue(PROPS[i]));
       if (next === null) continue;
       el.style.setProperty(PROPS[i], next, 'important');
@@ -248,9 +251,242 @@
     touched.forEach(function (el) {
       PROPS.forEach(function (p) { el.style.removeProperty(p); });
       el.removeAttribute(MARK);
+      el.removeAttribute('data-wf-blue');
     });
     touched = [];
     unadopt();
+  }
+
+
+  /* ============================================================
+     Contrast — WCAG 2.2 AA, enforced rather than hoped for
+     ------------------------------------------------------------
+     Neutralising by luminance preserves the prototype's contrast
+     relationships faithfully, which is right for rule 1 and not
+     sufficient on its own: a faithful map of a bad relationship is
+     still a bad relationship. Measured on the fixture before this
+     pass existed, the wireframe itself failed AA in nine places —
+     a secondary button at 1.4:1, sidebar navigation at 2.2:1.
+
+     That is not a cosmetic defect, it is a broken instrument. The
+     exercise exists to reveal where a design depends on colour to
+     carry meaning. If the wireframe is itself unreadable, every
+     hesitation in the session is ambiguous: the participant may
+     have stalled on the structure, or they may have stalled
+     because they could not see the text. The finding is lost
+     either way, and the one it manufactures is worse than none.
+
+     So contrast is a property of the specification. The targets
+     are AA: 4.5:1 for body text, 3:1 for large text (24px, or
+     18.66px at 700), 3:1 for the boundary of a control.
+     ============================================================ */
+
+  var AA_TEXT = 4.5, AA_LARGE = 3, AA_UI = 3;
+
+  var BLUE = [37, 99, 235];
+  var BLUE_ON_DARK = [147, 180, 251];
+
+  function parseColour(v) {
+    if (!v) return null;
+    var n = String(v).match(/[\d.]+/g);
+    if (!n) return null;
+    n = n.map(Number);
+    if (n.length < 3) return null;
+    return { r: n[0], g: n[1], b: n[2], a: n.length > 3 ? n[3] : 1 };
+  }
+
+  function luminance(c) {
+    return 0.2126 * toLinear(c[0]) + 0.7152 * toLinear(c[1]) + 0.0722 * toLinear(c[2]);
+  }
+
+  function contrast(a, b) {
+    var l1 = luminance(a), l2 = luminance(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+
+  /* The background a pixel of text is actually drawn on. Walks up
+     through transparent and semi-transparent ancestors, compositing
+     as it goes, and steps out of a shadow root via its host rather
+     than stopping at the boundary. Assumes white underneath
+     everything, which is what a browser does. */
+  function effectiveBackground(el) {
+    var stack = [];
+    var node = el;
+    while (node && node.nodeType === 1) {
+      var c = parseColour(getComputedStyle(node).backgroundColor);
+      if (c && c.a > 0) {
+        stack.push(c);
+        if (c.a >= 0.999) break;
+      }
+      var root = node.getRootNode && node.getRootNode();
+      node = node.parentElement || (root && root.host) || null;
+    }
+    var out = [255, 255, 255];
+    for (var i = stack.length - 1; i >= 0; i--) {
+      var s = stack[i];
+      out = [s.r * s.a + out[0] * (1 - s.a),
+             s.g * s.a + out[1] * (1 - s.a),
+             s.b * s.a + out[2] * (1 - s.a)];
+    }
+    return out;
+  }
+
+  /* The grey that hits a given contrast ratio against a background,
+     on whichever side has room. Because everything is neutral by the
+     time this runs, a grey's relative luminance IS its linear value,
+     so this solves directly instead of searching. */
+  function greyForContrast(bg, ratio) {
+    var lb = luminance(bg);
+    var darker = (lb + 0.05) / ratio - 0.05;
+    var lighter = ratio * (lb + 0.05) - 0.05;
+
+    var v, dir;
+    if (darker >= 0)        { v = fromLinear(darker);  dir = -1; }
+    else if (lighter <= 1)  { v = fromLinear(lighter); dir = 1; }
+    else                    { return lb > 0.5 ? 0 : 255; }  // mid-tone: neither side clears
+
+    /* Solving gives the exact luminance for the ratio; rounding that to
+       an integer sRGB channel lands just underneath it. Three elements
+       on the fixture came out at 4.49 against a 4.5 target — passing to
+       the eye, failing to an auditor, and exactly the sort of number
+       that makes an accessibility claim worthless. Step away from the
+       background until it genuinely clears. */
+    for (var i = 0; i < 12 && v >= 0 && v <= 255; i++) {
+      if (contrast([v, v, v], bg) >= ratio) return v;
+      v += dir;
+    }
+    return dir < 0 ? 0 : 255;
+  }
+
+  /* A blue at a target luminance, by mixing toward white or black.
+     Keeps the hue so the element still reads as interactive, which
+     is the constraint that makes this preferable to giving up and
+     painting the text grey. */
+  function blueForContrast(bg, ratio) {
+    var lb = luminance(bg);
+    for (var i = 0; i <= 20; i++) {
+      var t = i / 20;
+      var up = [BLUE[0] + (255 - BLUE[0]) * t, BLUE[1] + (255 - BLUE[1]) * t, BLUE[2] + (255 - BLUE[2]) * t];
+      if (contrast(up, bg) >= ratio && lb < 0.5) return up.map(Math.round);
+      var down = [BLUE[0] * (1 - t), BLUE[1] * (1 - t), BLUE[2] * (1 - t)];
+      if (contrast(down, bg) >= ratio && lb >= 0.5) return down.map(Math.round);
+    }
+    return null;
+  }
+
+  function isBlueish(c) {
+    return isInteractionBlue(c[0], c[1], c[2]) ||
+      (Math.abs(c[2] - BLUE_ON_DARK[2]) < 10 && c[2] > c[0] && c[2] > c[1]);
+  }
+
+  function requiredRatio(style) {
+    var size = parseFloat(style.fontSize) || 16;
+    var weight = parseInt(style.fontWeight, 10) || 400;
+    var large = size >= 24 || (size >= 18.66 && weight >= 700);
+    return large ? AA_LARGE : AA_TEXT;
+  }
+
+  function hasOwnSurface(el) {
+    var c = parseColour(getComputedStyle(el).backgroundColor);
+    return !!(c && c.a >= 0.999);
+  }
+
+  function rgb(c) { return 'rgb(' + Math.round(c[0]) + ', ' + Math.round(c[1]) + ', ' + Math.round(c[2]) + ')'; }
+
+  function fixContrast(el) {
+    if (el.closest && el.closest('[data-wf-chrome]')) return;
+
+    var hasText = false;
+    for (var i = 0; i < el.childNodes.length; i++) {
+      var n = el.childNodes[i];
+      if (n.nodeType === 3 && n.textContent.trim()) { hasText = true; break; }
+    }
+
+    var style = getComputedStyle(el);
+
+    if (hasText) {
+      var fg = parseColour(style.color);
+      if (fg && fg.a > 0.1) {
+        var fgc = [fg.r, fg.g, fg.b];
+        var bg = effectiveBackground(el);
+        var need = requiredRatio(style);
+
+        if (contrast(fgc, bg) < need) {
+          if (isBlueish(fgc)) {
+            /* Rule 2 outranks everything: the element must still read as
+               interactive, so the blue is never traded for a grey.
+
+               Order of remedy. First the on-dark variant, which is what
+               the stylesheet's data-wf-dark escape does by hand and which
+               nobody remembers to tag. Then, for a control that paints its
+               own surface, lighten the surface — a mid-grey button with a
+               blue label is the case that prompted this, and lightening
+               the button is the fix that leaves the label alone. Only then
+               adjust the blue itself. */
+            if (contrast(BLUE_ON_DARK, bg) >= need) {
+              el.style.setProperty('color', rgb(BLUE_ON_DARK), 'important');
+              el.setAttribute('data-wf-blue', '');
+              mark(el);
+            } else if (hasOwnSurface(el)) {
+              var v = greyForContrast(BLUE, need);
+              el.style.setProperty('background-color', rgb([v, v, v]), 'important');
+              mark(el);
+            } else {
+              var nb = blueForContrast(bg, need);
+              if (nb) {
+                el.style.setProperty('color', rgb(nb), 'important');
+                /* Flagged, not just painted. A derived blue is not in the
+                   stylesheet's list of four, so on the next pass the
+                   neutraliser would read it as an ordinary chromatic value
+                   and grey it — and the contrast pass would then be happy,
+                   because grey-on-light passes contrast perfectly well. The
+                   affordance would disappear on a DOM change, silently, some
+                   minutes into a review.
+
+                   Widening the blue test to a hue band would also fix that,
+                   and would break something worse: every blue in a
+                   blue-branded prototype would survive rule 1. Marking what
+                   we painted keeps the distinction exact. */
+                el.setAttribute('data-wf-blue', '');
+                mark(el);
+              }
+            }
+          } else {
+            var g = greyForContrast(bg, need);
+            el.style.setProperty('color', rgb([g, g, g]), 'important');
+            mark(el);
+          }
+        }
+      }
+    }
+
+    /* 1.4.11: the boundary of a control has to be discernible too. A
+       form field whose border has been neutralised into its own
+       background is not a field any more, it is a rectangle of text. */
+    if (el.matches && el.matches('input, select, textarea')) {
+      var bc = parseColour(style.borderTopColor);
+      if (bc && bc.a > 0.1 && parseFloat(style.borderTopWidth) > 0) {
+        var surround = effectiveBackground(el.parentElement || el);
+        if (contrast([bc.r, bc.g, bc.b], surround) < AA_UI) {
+          var bv = greyForContrast(surround, AA_UI);
+          ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color']
+            .forEach(function (p) { el.style.setProperty(p, rgb([bv, bv, bv]), 'important'); });
+          mark(el);
+        }
+      }
+    }
+  }
+
+  function mark(el) {
+    if (!el.hasAttribute(MARK)) { el.setAttribute(MARK, ''); touched.push(el); }
+  }
+
+  function contrastPass(root) {
+    var els = root.querySelectorAll('*');
+    for (var i = 0; i < els.length; i++) {
+      fixContrast(els[i]);
+      if (els[i].shadowRoot && !els[i].hasAttribute('data-wf-chrome')) contrastPass(els[i].shadowRoot);
+    }
   }
 
   /* ---------- lifecycle ----------
@@ -267,7 +503,13 @@
 
   function run() {
     running = true;
-    try { walk(document); } finally { running = false; }
+    try {
+      /* Two passes, and the order is load-bearing. The contrast pass
+         reads computed styles, so it has to see the neutralised colours
+         and the blue the stylesheet paints — not the originals. */
+      walk(document);
+      contrastPass(document);
+    } finally { running = false; }
   }
 
   function schedule() {

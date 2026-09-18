@@ -31,6 +31,7 @@
   ];
   const FAMILIES = ['helvetica', 'helvetica neue', 'arial', 'sans-serif'];
   const WEIGHTS = ['400', '700'];
+  const AA_TEXT = 4.5, AA_LARGE = 3;
 
   // Saturation tolerance. Anti-aliased and composited greys drift a
   // point or two off neutral; 12 is wide enough not to cry about that
@@ -82,6 +83,12 @@
   const failures = [];
 
   // ---------- rule 1 + 2: colour ----------
+  const CURRENT_COLOUR_PROPS = [
+    'color', 'borderTopColor', 'borderRightColor', 'borderBottomColor',
+    'borderLeftColor', 'outlineColor', 'textDecorationColor',
+    'columnRuleColor', 'caretColor', 'textEmphasisColor',
+  ];
+
   const COLOUR_PROPS = [
     'color', 'backgroundColor', 'backgroundImage', 'borderTopColor',
     'borderRightColor', 'borderBottomColor', 'borderLeftColor',
@@ -91,7 +98,15 @@
 
   visible.forEach(({ el, inShadow }) => {
     const s = getComputedStyle(el);
+    /* An element the neutraliser marked carries a blue derived from the
+       interaction blue to clear a contrast threshold — same hue, a few
+       percent lighter or darker. It is the spec's own output, not a leak. */
+    const derivedBlue = el.hasAttribute('data-wf-blue');
     COLOUR_PROPS.forEach(prop => {
+      /* `color` plus every property that DEFAULTS to currentColor. Miss one
+         and it reports the derived blue back as a leak, having inherited it:
+         column-rule-color is the one that actually did. */
+      if (derivedBlue && CURRENT_COLOUR_PROPS.includes(prop)) return;
       const v = s[prop];
       if (!v || v === 'none') return;
       for (const m of v.matchAll(/rgba?\(([^)]+)\)/g)) {
@@ -110,6 +125,7 @@
     '[role="checkbox"], [role="switch"], [role="option"], [onclick], [tabindex]:not([tabindex="-1"])';
 
   const paintsBlue = el => {
+    if (el.hasAttribute && el.hasAttribute('data-wf-blue')) return true;
     const s = getComputedStyle(el);
     return ['color', 'backgroundColor', 'borderTopColor', 'fill', 'stroke', 'outlineColor']
       .some(p => isBlue(parse(s[p])));
@@ -157,12 +173,75 @@
     }
   });
 
+
+  // ---------- rule 1b: right angles ----------
+  visible.forEach(({ el, inShadow }) => {
+    const r = getComputedStyle(el).borderRadius;
+    if (r && r !== '0px' && !/^0px( 0px)*$/.test(r)) {
+      failures.push(fail('1b', el, `border-radius: ${r}`, inShadow));
+    }
+  });
+
+  // ---------- rule 7: WCAG AA contrast ----------
+  const parseCol = v => {
+    const n = String(v).match(/[\d.]+/g);
+    if (!n || n.length < 3) return null;
+    const m = n.map(Number);
+    return { r: m[0], g: m[1], b: m[2], a: n.length > 3 ? m[3] : 1 };
+  };
+  const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const lum = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  const ratioOf = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+
+  /* Composites up through transparent ancestors and steps out of a
+     shadow root via its host, because the text is drawn on whatever is
+     actually behind it, not on whatever its parent declares. */
+  const bgOf = el => {
+    const stack = [];
+    let node = el;
+    while (node && node.nodeType === 1) {
+      const c = parseCol(getComputedStyle(node).backgroundColor);
+      if (c && c.a > 0) { stack.push(c); if (c.a >= 0.999) break; }
+      const root = node.getRootNode && node.getRootNode();
+      node = node.parentElement || (root && root.host) || null;
+    }
+    let out = [255, 255, 255];
+    for (let i = stack.length - 1; i >= 0; i--) {
+      const s = stack[i];
+      out = [s.r * s.a + out[0] * (1 - s.a),
+             s.g * s.a + out[1] * (1 - s.a),
+             s.b * s.a + out[2] * (1 - s.a)];
+    }
+    return out;
+  };
+
+  visible.forEach(({ el, inShadow }) => {
+    let hasText = false;
+    for (const n of el.childNodes) {
+      if (n.nodeType === 3 && n.textContent.trim()) { hasText = true; break; }
+    }
+    if (!hasText) return;
+    const s = getComputedStyle(el);
+    const fg = parseCol(s.color);
+    if (!fg || fg.a < 0.1) return;
+    const size = parseFloat(s.fontSize) || 16;
+    const weight = parseInt(s.fontWeight, 10) || 400;
+    const need = (size >= 24 || (size >= 18.66 && weight >= 700)) ? AA_LARGE : AA_TEXT;
+    const got = ratioOf([fg.r, fg.g, fg.b], bgOf(el));
+    if (got < need) {
+      failures.push(fail(7, el,
+        `${got.toFixed(2)}:1, needs ${need}:1 — "${el.textContent.trim().slice(0, 28)}"`, inShadow));
+    }
+  });
+
   // ---------- report ----------
   const RULES = {
-    1: 'Everything resolves to greyscale',
-    2: 'One blue, and only for things you can click',
-    3: 'Helvetica, regular and bold',
-    5: 'Imagery is replaced, not hidden',
+    1:   'Everything resolves to greyscale',
+    '1b':'Right angles — no corner radius',
+    2:   'One blue, and only for things you can click',
+    3:   'Helvetica, regular and bold',
+    5:   'Imagery is replaced, not hidden',
+    7:   'WCAG 2.2 AA contrast',
   };
 
   console.log('%cWireframe verification', 'font-weight:700;font-size:14px');
@@ -171,7 +250,7 @@
 
   let clean = true;
   Object.keys(RULES).forEach(r => {
-    const hits = failures.filter(f => f.rule === +r);
+    const hits = failures.filter(f => String(f.rule) === String(r));
     if (hits.length) {
       clean = false;
       console.groupCollapsed(`%c FAIL %c Rule ${r} — ${RULES[r]} (${hits.length})`,
@@ -203,5 +282,5 @@
     clear: () => failures.forEach(f => { f.node.style.outline = ''; }),
   };
   return { total: failures.length, byRule: Object.fromEntries(
-    Object.keys(RULES).map(r => [r, failures.filter(f => f.rule === +r).length])) };
+    Object.keys(RULES).map(r => [r, failures.filter(f => String(f.rule) === String(r)).length])) };
 })();
