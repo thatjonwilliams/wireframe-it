@@ -214,6 +214,40 @@ html.wireframe-mode *::after {
 }
 
 /* ------------------------------------------------------------
+   1c. No transitions
+   ------------------------------------------------------------
+   Motion is off while the wireframe is on, and this is a
+   correctness requirement rather than a stylistic one.
+
+   The neutraliser works by reading each element's COMPUTED colour
+   and writing back the grey of equivalent luminance, skipping
+   anything already at the interaction blue. A CSS transition
+   makes that reading non-deterministic: sample a border that is
+   easing from grey to blue and you get an intermediate value,
+   which is not the blue, so it gets greyed — and the inline grey
+   it writes then becomes the transition's own target, so the
+   affordance can never arrive. It is stable, silent and wrong.
+
+   Found on a real Next.js app whose login field transitions its
+   border colour. The field reported as "interactive but reads as
+   grey" through several rounds of diagnosis; the computed value
+   at the moment of sampling was rgb(51, 116, 236), fourteen
+   points off a blue the detector allows six.
+
+   Animations are stopped for the same reason. Nothing that was
+   reachable becomes unreachable: an accordion still opens, it
+   simply arrives immediately, which for a structural review is
+   no loss and arguably a help.
+   ------------------------------------------------------------ */
+
+html.wireframe-mode *,
+html.wireframe-mode *::before,
+html.wireframe-mode *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ------------------------------------------------------------
    2. Common design-token names
    Most prototypes (and every shadcn/ui app) express colour as
    custom properties. Overriding them here reaches the majority
@@ -352,6 +386,34 @@ html.wireframe-mode :is(button, [role="button"], a[href]):not(:disabled):is(
 html.wireframe-mode :is(input[type="checkbox"], input[type="radio"],
   input[type="range"], progress, select) {
   accent-color: var(--wf-interactive) !important;
+}
+
+/* Text entry fields.
+   Found by running this on a real Next.js app: the email field on its login
+   screen was the only rule 2 failure on the page. Rule 2's own test asks
+   whether something is a native form control, and a text input plainly is —
+   but the interaction rule above lists links, buttons and roles, so a field
+   was left painting the same grey as the card it sat in.
+
+   The affordance of a text field is its box, so the box is what takes the
+   blue. The label and the value stay grey: they are content, not the
+   control, and painting the text blue makes a filled field read as a link.
+
+   Placeholder text deliberately stays grey and is NOT held to the 4.5:1
+   body-text threshold — it is not content, and a placeholder that reads as
+   strongly as a value is its own usability finding. */
+html.wireframe-mode :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  textarea, select) {
+  border-color: var(--wf-interactive) !important;
+  caret-color: var(--wf-interactive) !important;
+}
+
+/* A field with no border of its own still has to read as one. Without this,
+   an underlined or borderless input — the fashionable kind, and common in
+   generated prototypes — has no affordance at all once colour is gone. */
+html.wireframe-mode :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  textarea, select):where([style*="border: none"], [style*="border:none"], .border-0, .border-none) {
+  box-shadow: inset 0 -1px 0 0 var(--wf-interactive) !important;
 }
 
 html.wireframe-mode :is(input, textarea, select) {

@@ -219,3 +219,61 @@ Two details in that rewrite are worth knowing, because both fail silently:
 Closed-mode shadow roots (`attachShadow({mode:'closed'})`) are genuinely unreachable — `element.shadowRoot` returns null and there is no way in from outside. Rare in application code, occasional in third-party embeds. If `verify.js` reports a region it cannot see, or you can see colour that nothing flags, suspect a closed root and say so in the report rather than working around it.
 
 Cross-origin iframes are unreachable for the same practical reason. Neither CSS nor script crosses that boundary. Report it.
+
+---
+
+## 9. Bundled apps, and auth middleware
+
+Next, Nuxt, Vite, Remix — anything that ships CSS and JS as modules rather than as files in a public directory. Two traps, both silent.
+
+### Do not put the assets in `public/`
+
+The obvious move is to drop `wireframe.css` and the scripts into `public/wireframe/` and reference them with a `<link>` and two `<script>` tags. On any app with auth middleware this fails, and it fails invisibly: the tags sit in the DOM, the requests are answered with a **307 to the login page**, nothing loads, and the page looks entirely normal.
+
+The usual Next matcher is written to exclude images and nothing else:
+
+```js
+matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|mp4)$).*)"]
+```
+
+`.css` and `.js` are not in that list, so the middleware swallows them. `/_next/static` **is** excluded — which is the answer. Import the assets through the bundler and they are served from a path the matcher already lets through, with no change to anyone's auth config:
+
+```tsx
+// app/layout.tsx
+import "./globals.css";
+import "@/wireframe/wireframe.css";
+import { WireframeIt } from "@/wireframe/WireframeIt";
+```
+
+```tsx
+// wireframe/WireframeIt.tsx
+'use client';
+import { useEffect } from 'react';
+
+export function WireframeIt() {
+  useEffect(() => {
+    import('./wireframe-toggle.js');
+    import('./wireframe-neutralise.js');
+  }, []);
+  return null;
+}
+```
+
+### Import the scripts inside `useEffect`, not at module scope
+
+Both scripts are IIFEs that touch `document` the moment they evaluate, and a `'use client'` component is still rendered on the server. A top-level import crashes the SSR pass. The dynamic import inside `useEffect` is what keeps them client-only.
+
+### Getting the verifier in
+
+`verify.js` is pasted into the console, so it needs to be reachable. Behind middleware it is not. The quickest way in without touching anyone's config is to exploit the matcher's own exclusion list — copy it to `public/wf-verify.svg` and fetch that:
+
+```js
+const src = await fetch('/wf-verify.svg').then(r => r.text());
+eval(src);
+```
+
+`fetch().text()` does not care about the content type. Delete the file afterwards.
+
+### Expect a stale module
+
+Turbopack and Vite both cache dynamically imported modules aggressively. If a fix to the neutraliser appears to have no effect, confirm it is actually in the bundle before diagnosing anything else — restart the dev server and clear `.next` or `node_modules/.vite`. Two rounds of a real diagnosis were spent on a fix that was correct and simply not loaded.

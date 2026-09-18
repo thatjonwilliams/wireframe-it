@@ -16,6 +16,7 @@ Reset a styled prototype to a known neutral baseline that still runs, behind a t
 | Typeface | Helvetica everywhere — headings, body, numerals, code | Rule 3 |
 | Weight | 400 and 700 only, quantised at 600 | Rule 3 |
 | Corners | Right angles — radius removed everywhere | Rule 1b |
+| Motion | Transitions and animations off | Rule 1c |
 | Contrast | WCAG 2.2 AA: 4.5:1 text, 3:1 large text and controls | Rule 7 |
 | Type scale | **Unchanged** | Rule 4 |
 | Layout, spacing, borders, shadows | **Unchanged**, resolved to grey | Rule 4 |
@@ -57,6 +58,16 @@ It costs nothing that rule 4 protects: a square card occupies exactly the same b
 
 Applied to everything rather than to a list of containers. Pills, badges, avatars and round icon buttons are the same decision at different sizes, and squaring the containers while leaving the circles reads as an oversight rather than a rule.
 
+### 1c. No transitions
+
+Transitions and animations are off while the wireframe is on. This is a correctness requirement, not a stylistic one.
+
+The neutraliser reads each element's *computed* colour and writes back the grey of equivalent luminance, skipping anything already at the interaction blue. A transition makes that reading non-deterministic: sample a border easing from grey to blue and you get an intermediate value, which is not the blue, so it gets greyed — and the inline grey then becomes the transition's own target, so the affordance can never arrive. Stable, silent, and wrong.
+
+Found on a real Next.js app whose login field transitions its border. The field reported as "interactive but reads as grey" through several rounds of diagnosis; the value at the moment of sampling was `rgb(51, 116, 236)`, fourteen points off a blue the detector allows six.
+
+Nothing reachable becomes unreachable — an accordion still opens, it just arrives immediately, which for a structural review is no loss.
+
 ### 2. One blue, and only for things you can click
 
 Links, buttons, icon buttons, tabs, menu items, toggles, checkboxes, filter chips, navigating table rows. Anything that responds to a click or a tap gets the blue. Nothing else does, ever.
@@ -74,6 +85,8 @@ It is not a brand colour — it should read as a browser default, the visual equ
 | That blue chip against `#121212` | boundary | 3.93:1 |
 
 One value covers all three, because blue text on off-white and an off-white label on blue have the identical contrast requirement.
+
+**Text fields count, and their border is the affordance.** The box takes the blue; the label and the value stay grey, because they are content rather than the control — paint the text blue and a filled field reads as a link. Placeholder text stays grey and is deliberately *not* held to the 4.5:1 body threshold: it is not content, and a placeholder as strong as a value is its own finding. A borderless field gets an inset underline instead, or it has no affordance at all once colour is gone.
 
 The test for clickable: does it have an `href`, an `onClick`, a `role="button"`, or is it a native form control? Decorative icons inside a clickable parent inherit the blue, because the whole target is the affordance. Disabled controls stay grey — that distinction is part of what you are trying to see.
 
@@ -143,7 +156,9 @@ Grey text is fixed by moving the text, not the surface, so the prototype's surfa
 
 There is deliberately **no step that derives a new blue**. An earlier version had one, and it was the source of the problem this rule now prevents: it emitted shades that were not the interaction blue, needed an attribute to stop later passes greying them, and read on the screen as a second and third blue.
 
-**Rule 2 outranks this rule.** The blue is never traded for a grey to win a contrast argument. If an affordance cannot be made to pass, that is a finding to report, not a thing to paint over.
+**Rule 2 outranks this rule**, and that has to be enforced rather than merely stated. The blue is never traded for a grey to win a contrast argument. If an affordance cannot be made to pass, that is a finding to report, not a thing to paint over.
+
+The concrete case: a text field's border is its affordance *and* a UI component under 1.4.11, so both rules have an opinion about it. An earlier version let rule 7 win, measured the blue against the card behind it, and wrote a grey border inline with `!important` — destroying the affordance permanently. A border already at the interaction blue is now left alone; it clears 1.4.11 on any light surface anyway.
 
 AA here is a floor for the *wireframe*, not a claim about the product. The styled version is a separate question — and one the exercise usually raises, since a design that needed this much correcting in neutral form rarely passes in colour either.
 

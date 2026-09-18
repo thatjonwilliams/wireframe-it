@@ -471,6 +471,26 @@
        background is not a field any more, it is a rectangle of text. */
     if (el.matches && el.matches('input, select, textarea')) {
       var bc = parseColour(style.borderTopColor);
+
+      /* Rule 2 outranks rule 7, and this is where that had to be enforced
+         rather than merely stated.
+
+         A text field's border IS its affordance, so the interaction layer
+         paints it blue. This check was then measuring that blue against the
+         card behind it and, whenever it read anything short of 3:1, writing
+         a grey border inline with !important — which beats the stylesheet
+         and destroys the affordance for good.
+
+         Caught on a real Next.js app: one field on a login screen reported
+         as "interactive but reads as grey" through several rounds of
+         diagnosis, with an inline border of rgb(148,148,148) that was
+         exactly greyForContrast(white, 3).
+
+         A border already at the interaction blue is left alone. It clears
+         1.4.11 comfortably on any light surface (4.57:1 on off-white), and
+         on a dark one the container lift handles it. */
+      if (bc && isInteractionBlue(bc.r, bc.g, bc.b)) return;
+
       if (bc && bc.a > 0.1 && parseFloat(style.borderTopWidth) > 0) {
         var surround = effectiveBackground(el.parentElement || el);
         if (contrast([bc.r, bc.g, bc.b], surround) < AA_UI) {
@@ -562,8 +582,31 @@
      its own work. */
 
   var observer = null;
+  var waited = 0;
   var pending = null;
   var running = false;
+
+  /* Has the theme layer actually applied yet?
+
+     This guard exists because of a race that is invisible when the
+     stylesheet is a plain <link> and reliable when it is not. Bundled
+     apps — Next, Vite, anything that ships CSS as a module — can mount
+     the toggle and flip the class before the wireframe stylesheet has
+     been applied. The first pass then reads pre-wireframe colours,
+     writes greys inline with !important, and those greys are achromatic,
+     so every later pass skips them. The blue the stylesheet was about to
+     paint can never land, and nothing anywhere reports an error.
+
+     It showed up on a real Next.js 16 app as a single rule 2 failure:
+     one text field reading grey while its caret — a property the app
+     never set, so there was nothing to grey — was correctly blue.
+
+     Reading a custom property the sheet defines is the cheapest honest
+     test that it is live. */
+  function themeReady() {
+    return !!getComputedStyle(document.documentElement)
+      .getPropertyValue('--wf-interactive').trim();
+  }
 
   function run() {
     running = true;
@@ -584,6 +627,14 @@
   }
 
   function on() {
+    if (!themeReady()) {
+      /* Bounded, and it gives up loudly rather than silently producing a
+         half-neutralised page that looks plausible. */
+      if (waited < 40) { waited++; setTimeout(on, 50); return; }
+      console.warn('[wireframe-it] wireframe.css never applied — is it imported? ' +
+        'Neutralising anyway; expect affordances to read grey.');
+    }
+    waited = 0;
     run();
     if (observer) return;
     observer = new MutationObserver(function (records) {
