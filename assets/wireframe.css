@@ -1,0 +1,330 @@
+/* ============================================================
+   Wireframe Review — theme layer
+   ------------------------------------------------------------
+   Import this ONCE, globally. It does nothing until the class
+   `wireframe-mode` is present on <html>, so adding the file is
+   always safe and always reversible.
+
+   Everything here is scoped. Do not edit the prototype's own
+   styles — add project-specific overrides at the bottom of this
+   file instead, inside the same scope.
+   ============================================================ */
+
+html.wireframe-mode {
+  /* Grey ramp. Ten steps, roughly even in lightness, so you can
+     map any original colour to a grey of similar tone and keep
+     the prototype's contrast relationships intact. */
+  --wf-0:  #ffffff;
+  --wf-1:  #f7f7f8;
+  --wf-2:  #ededee;
+  --wf-3:  #dcdcde;
+  --wf-4:  #c2c2c6;
+  --wf-5:  #9a9aa0;
+  --wf-6:  #6e6e76;
+  --wf-7:  #4a4a51;
+  --wf-8:  #2d2d33;
+  --wf-9:  #131316;
+
+  /* The one permitted colour. Interaction only. It should read
+     as a system default, not a choice. If a reviewer starts
+     having opinions about it, flatten it further. */
+  --wf-interactive: #2563eb;
+  --wf-interactive-hover: #1d4ed8;
+  --wf-interactive-subtle: #eff4fe;
+
+  /* On a dark surface the interaction blue is invisible: mapped to an
+     equivalent-lightness grey, a dark app bar sits at roughly the same
+     luminance as the blue itself. Rule 2 wins over rule 1 in that case.
+     Apply this variant to interactive elements on any surface darker
+     than --wf-5. */
+  --wf-interactive-on-dark: #93b4fb;
+
+  --wf-font: Inter, Geist, Helvetica, "Helvetica Neue", Arial, sans-serif;
+
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------
+   1. Typeface
+   One family, two weights. The type SCALE is left alone on
+   purpose: the relative sizes encode someone's intent about
+   hierarchy, and testing that intent is the whole point.
+   ------------------------------------------------------------ */
+
+html.wireframe-mode,
+html.wireframe-mode * {
+  font-family: var(--wf-font) !important;
+  font-feature-settings: normal !important;
+  letter-spacing: normal !important;
+}
+
+html.wireframe-mode :is(h1, h2, h3, h4, h5, h6, th, strong, b),
+html.wireframe-mode [class*="font-semibold"],
+html.wireframe-mode [class*="font-bold"],
+html.wireframe-mode [class*="font-black"] {
+  font-weight: 600 !important;
+}
+
+/* `:where()` rather than `:is()` on purpose. `:is()` takes the specificity
+   of its heaviest argument, so this rule would beat any single-class rule
+   the project uses to express emphasis and silently flatten the hierarchy
+   rule 3 says to keep. `:where()` scores zero, so the project still wins.
+
+   `html:where(.wireframe-mode)` rather than `html.wireframe-mode` for the
+   same reason: the scoping class would otherwise contribute a class's worth
+   of specificity and beat `.logo { font-weight: 700 }` anyway. Scoped to
+   zero, this is a default that any project rule overrides, which is what a
+   default should be. */
+html:where(.wireframe-mode) :where(p, span, div, li, td, input, textarea, label, small) {
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------
+   2. Common design-token names
+   Most prototypes (and every shadcn/ui app) express colour as
+   custom properties. Overriding them here reaches the majority
+   of the interface without touching a single component.
+   Add whatever names this project actually uses.
+   ------------------------------------------------------------ */
+
+html.wireframe-mode {
+  --background: var(--wf-0);
+  --foreground: var(--wf-9);
+  --card: var(--wf-0);
+  --card-foreground: var(--wf-9);
+  --popover: var(--wf-0);
+  --popover-foreground: var(--wf-9);
+  --primary: var(--wf-interactive);
+  --primary-foreground: var(--wf-0);
+  --secondary: var(--wf-2);
+  --secondary-foreground: var(--wf-8);
+  --muted: var(--wf-2);
+  --muted-foreground: var(--wf-6);
+  --accent: var(--wf-2);
+  --accent-foreground: var(--wf-8);
+  --destructive: var(--wf-7);
+  --destructive-foreground: var(--wf-0);
+  --border: var(--wf-3);
+  --input: var(--wf-3);
+  --ring: var(--wf-interactive);
+
+  /* Semantic names, which is where meaning-by-colour usually lives. They
+     all collapse to one grey on purpose: if a status is only legible
+     because it was red, flattening it is the finding, not a defect.
+     Projects name these differently. Enumerate the real ones in section 8
+     and override them here — a half-converted status system, where the
+     row stripe greys out but the badge stays red, is worse than either. */
+  --success: var(--wf-6);   --success-foreground: var(--wf-0);
+  --warning: var(--wf-6);   --warning-foreground: var(--wf-0);
+  --danger:  var(--wf-6);   --danger-foreground:  var(--wf-0);
+  --error:   var(--wf-6);   --error-foreground:   var(--wf-0);
+  --info:    var(--wf-6);   --info-foreground:    var(--wf-0);
+  --status-critical: var(--wf-6);
+  --status-urgent:   var(--wf-6);
+  --status-routine:  var(--wf-6);
+  --status-resolved: var(--wf-6);
+}
+
+/* ------------------------------------------------------------
+   3. Base surfaces and text
+   ------------------------------------------------------------ */
+
+/* Not `!important`, and `:where()` for zero specificity: if the project
+   gives the page a tone of its own, that tone is part of the structure
+   rule 4 preserves, and it should win over this fallback. */
+html.wireframe-mode :where(body) {
+  background: var(--wf-0);
+  color: var(--wf-9);
+}
+
+/* Structure is preserved, tone is not. Borders and dividers keep
+   their weight and radius and lose their hue. */
+html.wireframe-mode * {
+  border-color: var(--wf-3) !important;
+  text-decoration-color: currentColor !important;
+}
+
+/* Shadows keep their shape, lose their tint. */
+html.wireframe-mode [style*="box-shadow"],
+html.wireframe-mode [class*="shadow"] {
+  --tw-shadow-color: rgb(0 0 0 / 0.10);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 12px rgb(0 0 0 / 0.08) !important;
+}
+
+/* ------------------------------------------------------------
+   4. Interaction — the only colour in the building
+   ------------------------------------------------------------ */
+
+/* `:where()` again, and for a second reason. `:is(a[href], …)` scores
+   (0,2,2) once the `html.wireframe-mode` prefix is counted, which beats
+   the obvious project override `html.wireframe-mode .primary` at (0,2,1)
+   AND beats the disabled rule below it. Result: disabled buttons paint
+   blue, which destroys the live-versus-dead distinction this rule exists
+   to reveal. `:where()` scores zero and both problems go away.
+
+   Labels are deliberately absent. A label is a proxy for its control,
+   not an affordance of its own, and painting some labels blue purely
+   because their control happens to be a native input reads as a
+   distinction the interface is not actually making. */
+html.wireframe-mode :where(a[href], button, [role="button"], [role="tab"],
+  [role="menuitem"], [role="link"], summary) {
+  color: var(--wf-interactive) !important;
+}
+
+/* Icons inside a clickable target are part of the target. */
+html.wireframe-mode :where(a[href], button, [role="button"], [role="tab"],
+  [role="menuitem"]) :where(svg, path, circle, rect, line, polygon, polyline) {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  color: var(--wf-interactive) !important;
+}
+
+/* Interactive elements sitting on a dark surface. Tag the container with
+   data-wf-dark and the blue lightens enough to be seen. See the note on
+   --wf-interactive-on-dark above. */
+html.wireframe-mode [data-wf-dark] :where(a[href], button, [role="button"],
+  [role="tab"], [role="menuitem"], summary) {
+  color: var(--wf-interactive-on-dark) !important;
+}
+
+/* Filled buttons: the blue moves to the surface, the label goes white.
+   Detected by the usual utility and token names — extend as needed. */
+/* `:is()` here on purpose, and `:not(:disabled)` to make the exception
+   explicit rather than leaving it to cascade order. This rule has to
+   outrank the utility bands in section 6, or a primary action painted
+   `bg-indigo-600` lands in the dark grey band and stops reading as the
+   primary action. Disabled buttons are excluded so they still fall
+   through to the grey treatment in the rule above. */
+html.wireframe-mode :is(button, [role="button"], a[href]):not(:disabled):not([aria-disabled="true"]):is(
+  [class*="btn-primary"], [class*="bg-primary"], [class*="bg-blue"],
+  [class*="bg-indigo"], [class*="bg-violet"], [class*="bg-green"],
+  [class*="bg-emerald"], [class*="bg-black"], [data-variant="default"]) {
+  background: var(--wf-interactive) !important;
+  color: var(--wf-0) !important;
+  border-color: var(--wf-interactive) !important;
+}
+
+html.wireframe-mode :is(button, [role="button"], a[href]):not(:disabled):is(
+  [class*="btn-primary"], [class*="bg-primary"], [class*="bg-blue"],
+  [class*="bg-indigo"]) svg {
+  color: var(--wf-0) !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Native controls. */
+html.wireframe-mode :is(input[type="checkbox"], input[type="radio"],
+  input[type="range"], progress, select) {
+  accent-color: var(--wf-interactive) !important;
+}
+
+html.wireframe-mode :is(input, textarea, select) {
+  background: var(--wf-0) !important;
+  color: var(--wf-9) !important;
+}
+
+html.wireframe-mode ::placeholder { color: var(--wf-5) !important; }
+html.wireframe-mode ::selection {
+  background: var(--wf-interactive-subtle) !important;
+  color: var(--wf-9) !important;
+}
+
+html.wireframe-mode :focus-visible {
+  outline: 2px solid var(--wf-interactive) !important;
+  outline-offset: 2px !important;
+}
+
+/* Disabled things stay grey. Seeing which affordances are live
+   and which are not is part of what the exercise is for. */
+html.wireframe-mode :is(:disabled, [aria-disabled="true"], [data-disabled]),
+html.wireframe-mode :is(:disabled, [aria-disabled="true"]) * {
+  color: var(--wf-5) !important;
+  background-color: var(--wf-2) !important;
+  border-color: var(--wf-3) !important;
+}
+
+/* ------------------------------------------------------------
+   5. Media
+   Images keep their footprint so the layout is unchanged.
+   Greyscale by filter catches gradients, photos, video posters
+   and anything else CSS colour rules cannot reach.
+   ------------------------------------------------------------ */
+
+/* `grayscale(1)` alone. Pairing it with `contrast()` is tempting and is a
+   mistake anywhere but a photograph: on a container it darkens white fills
+   and quietly undoes the tonal mapping rule 1 depends on. If a particular
+   image needs flattening, do it on that image. */
+html.wireframe-mode :is(img, video, canvas, picture, iframe, [style*="background-image"]) {
+  filter: grayscale(1) !important;
+}
+
+/* For a stronger read, swap the rule above for this one and let
+   the labelled placeholder stand in. See SKILL.md rule 5. */
+html.wireframe-mode [data-wf-placeholder] {
+  position: relative;
+  background: var(--wf-2) !important;
+  color: var(--wf-6) !important;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  text-align: center;
+}
+html.wireframe-mode [data-wf-placeholder]::after {
+  content: attr(data-wf-placeholder);
+  color: var(--wf-6);
+}
+
+/* Standalone decorative SVG (not inside a clickable target).
+   Icon sets usually carry colour as `fill="#..."` / `stroke="#..."`
+   presentation attributes in the markup. Those are invisible to a `color`
+   rule but are beaten by the CSS `fill` and `stroke` properties, which is
+   why both are set here rather than relying on currentColor. */
+html.wireframe-mode svg:not(:is(a[href], button, [role="button"], [role="tab"], [role="menuitem"]) svg),
+html.wireframe-mode svg:not(:is(a[href], button, [role="button"], [role="tab"], [role="menuitem"]) svg) :is(path, circle, rect, line, polygon, polyline, ellipse, g) {
+  color: var(--wf-7) !important;
+}
+
+/* Fill and stroke are handled separately on purpose: an outline icon is
+   `fill="none" stroke="#…"`, and setting fill on it turns it into a blob. */
+html.wireframe-mode svg:not(:is(a[href], button, [role="button"], [role="tab"], [role="menuitem"]) svg):is([fill]:not([fill="none"])),
+html.wireframe-mode svg:not(:is(a[href], button, [role="button"], [role="tab"], [role="menuitem"]) svg) [fill]:not([fill="none"]) {
+  fill: var(--wf-7) !important;
+}
+
+html.wireframe-mode svg:not(:is(a[href], button, [role="button"], [role="tab"], [role="menuitem"]) svg):is([stroke]:not([stroke="none"])),
+html.wireframe-mode svg:not(:is(a[href], button, [role="button"], [role="tab"], [role="menuitem"]) svg) [stroke]:not([stroke="none"]) {
+  stroke: var(--wf-7) !important;
+}
+
+/* ------------------------------------------------------------
+   6. Tailwind literal utilities
+   AI-built prototypes usually write colour straight into the
+   markup. That needs a long enumerated layer, which lives in its
+   own file to keep this one readable: import
+   `wireframe-tailwind.css` after this file when the project uses
+   Tailwind. Skip it otherwise; it does nothing useful elsewhere.
+   ------------------------------------------------------------ */
+
+/* ------------------------------------------------------------
+   7. The toggle itself
+   The control is rendered into a shadow root so these rules
+   cannot reach it. This is belt and braces for the host element
+   and for anyone mounting the React version, which has no shadow
+   root: review chrome must never look like part of the product.
+   ------------------------------------------------------------ */
+
+html.wireframe-mode [data-wf-chrome],
+html.wireframe-mode [data-wf-chrome] * {
+  filter: none !important;
+  font-family: Inter, Helvetica, Arial, sans-serif !important;
+}
+
+/* ------------------------------------------------------------
+   8. Project-specific overrides
+   Everything in this file uses `:where()` or a guarded attribute
+   selector, so a plain `html.wireframe-mode .your-class` rule here
+   will win. That is deliberate: your overrides should not have to
+   fight the base sheet.
+   Add them below. Everything must stay inside the
+   `html.wireframe-mode` scope so the toggle still works.
+   ------------------------------------------------------------ */
