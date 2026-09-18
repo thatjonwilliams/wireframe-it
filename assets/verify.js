@@ -148,12 +148,12 @@
     if (el.tagName === 'IMG' && !el.hasAttribute('data-wf-placeholder')) {
       const s = getComputedStyle(el);
       if (s.filter === 'none' && !el.closest('[data-wf-placeholder]')) {
-        failures.push(fail(5, el, 'image not neutralised or labelled', inShadow));
+        failures.push(fail(5, el, 'image not greyscaled or labelled', inShadow));
       }
     }
     const bg = getComputedStyle(el).backgroundImage;
     if (bg && bg.includes('url(') && !el.hasAttribute('data-wf-placeholder')) {
-      failures.push(fail(5, el, 'CSS background image — needs data-wf-placeholder', inShadow));
+      failures.push(fail(5, el, 'CSS background image — needs a grayscale rule in section 8, or data-wf-placeholder', inShadow));
     }
   });
 
@@ -224,7 +224,7 @@
     '1b':'Right angles — no corner radius',
     2:   'One blue, and only for things you can click',
     3:   'Helvetica, regular and bold',
-    5:   'Imagery is replaced, not hidden',
+    5:   'Imagery is desaturated, not hidden',
     7:   'WCAG 2.2 AA contrast',
   };
 

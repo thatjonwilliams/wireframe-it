@@ -457,7 +457,11 @@ html.wireframe-mode :is(img, video, canvas, picture, iframe, [style*="background
 }
 
 /* For a stronger read, swap the rule above for this one and let
-   the labelled placeholder stand in. See SKILL.md rule 5. */
+   the labelled placeholder stand in — opt-in, for images that genuinely are
+   filler. Greyscaling in place is the default: an image carries real
+   information about what a screen is for, and a page of captioned
+   rectangles tests a different product from the one that was built.
+   See SKILL.md rule 5. */
 html.wireframe-mode [data-wf-placeholder] {
   position: relative;
   background: var(--wf-2) !important;

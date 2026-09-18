@@ -20,7 +20,7 @@ Reset a styled prototype to a known neutral baseline that still runs, behind a t
 | Contrast | WCAG 2.2 AA: 4.5:1 text, 3:1 large text and controls | Rule 7 |
 | Type scale | **Unchanged** | Rule 4 |
 | Layout, spacing, borders, shadows | **Unchanged**, resolved to grey | Rule 4 |
-| Imagery | Labelled grey block at the original dimensions | Rule 5 |
+| Imagery | Greyscaled in place, original dimensions | Rule 5 |
 | Behaviour, routes, states | **Unchanged** and fully working | Rule 6 |
 
 Everything in bold is preserved because it is the evidence. Everything else is removed because nobody decided it. Step 5 is how you prove the page actually reached this state rather than approximately resembling it.
@@ -124,13 +124,22 @@ Two exceptions. Corner radius is removed outright — see rule 1b, which costs n
 
 The self-test holds the line in exactly those terms — vertical shift within 2px, document height within 4px, horizontal reflow allowed. If a screen fails it, the usual cause is text that was already one word from wrapping, and the honest fix is to report it rather than to relax the typography.
 
-### 5. Imagery is replaced, not hidden
+### 5. Imagery is desaturated, not hidden
 
-Photographs, illustrations and decorative graphics become a neutral grey block at the same dimensions, labelled with what the slot holds ("Product photo", "Hero illustration", "User avatar"). Keeping the footprint preserves the layout; the label keeps the content's job legible. Removing images outright changes the composition and breaks rule 4.
+Photographs, illustrations and decorative graphics are greyscaled in place, at their original dimensions. They keep their footprint, so the composition rule 4 protects is untouched, and they keep their content, so nobody has to guess what the slot holds.
+
+This is deliberately the lighter treatment. The alternative — swapping every image for a labelled grey block — was the earlier rule here, and in practice it costs more than it returns. An image carries real information about what a screen is for, a reviewer attempting a task uses it the way a user would, and a page of captioned rectangles tests a different product from the one that was built. Colour is what the exercise removes; content is not.
+
+Two consequences worth expecting, and both are findings rather than defects:
+
+- **A photograph still carries mood, depth and focal weight in greyscale.** If a hero image is doing the work a headline should be doing, a desaturated version will show you that, because the text has to compete with it either way.
+- **Text over an image is where contrast fails first.** Rule 7 holds the interface to AA, but it cannot measure type sitting on a photograph. Judge that one by eye.
+
+Where an image genuinely is placeholder filler — stock that will be replaced, a mock avatar, a chart that is a screenshot rather than a chart — substitute the labelled block by hand with `data-wf-placeholder="Hero image"` on the element. That remains available; it is just no longer the default.
 
 Logos become a plain grey wordmark of the product name. Functional graphics that carry data — charts, maps, sparklines — stay, restyled to the grey ramp.
 
-One mechanical limit worth knowing before you go looking for it: an `<img>` is caught automatically, but an image set as a `background` in a stylesheet is not, because CSS cannot select an element by the value of its computed background. Those have to be marked by hand, with `data-wf-placeholder="Hero image"` on the element. Grep the stylesheets for `url(` and you will have the list in a few seconds.
+One mechanical limit worth knowing before you go looking for it: an `<img>` is greyscaled automatically, but an image set as a `background` in a stylesheet is not, because CSS cannot select an element by the value of its computed background. Those need `data-wf-placeholder` on the element, or a `filter: grayscale(1)` rule of their own in section 8. Grep the stylesheets for `url(` and you will have the list in a few seconds.
 
 ### 6. Everything still works
 
@@ -211,7 +220,7 @@ Two details that matter in review: the toggle must be reachable from every scree
 Three things are outside the reach of both the stylesheet and the neutraliser, because they are not styled DOM at all. Deal with them by hand before verifying:
 
 1. **Canvas and chart library configs**, which take colours as JavaScript values. `references/stacks.md` § 5.
-2. **CSS background images.** An `<img>` is caught automatically; a `background: url(...)` is not, because CSS cannot select an element by the value of its computed background. Mark those by hand with `data-wf-placeholder="Hero image"`. Grep the stylesheets for `url(` and you have the list in seconds.
+2. **CSS background images.** An `<img>` is greyscaled automatically; a `background: url(...)` set in a stylesheet is not, because CSS cannot select an element by the value of its computed background. Give those a `filter: grayscale(1)` rule in section 8, or `data-wf-placeholder="Hero image"` if the image is filler. Grep the stylesheets for `url(` and you have the list in seconds.
 3. **Emoji**, which are full-colour glyphs that survive anything done in CSS.
 
 Everything else — inline styles, hardcoded class colours, gradients, tinted shadows, SVG fill and stroke, focus rings, scrollbars, shadow roots — the neutraliser handles. That was not true of earlier versions of this skill, which asked you to sweep all of it manually; if you have run this before, that step is gone.

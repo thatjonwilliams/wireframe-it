@@ -62,6 +62,7 @@ had already stripped them. The test was comparing damage to damage.
 | rule 4 — nothing reflows vertically (≤2px) | a change that makes text wrap differently |
 | rule 4 — document height holds (≤4px) | the same, at page scale |
 | rules 1, 1b, 2, 3, 5, 7 — zero violations | any override that stops matching |
+| rule 5 | an image left in colour, or a stylesheet background nothing can reach |
 | only one corner radius renders, and it is zero | a radius surviving in a shadow root or utility class |
 | rule 7 — WCAG AA contrast | the wireframe becoming unreadable and confounding the session |
 | exactly one non-grey colour renders | a second blue arriving as a hover, on-dark, tint or runtime-derived shade |
