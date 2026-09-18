@@ -39,44 +39,112 @@ html.wireframe-mode {
      than --wf-5. */
   --wf-interactive-on-dark: #93b4fb;
 
-  --wf-font: Inter, Geist, Helvetica, "Helvetica Neue", Arial, sans-serif;
+  /* Helvetica. Not "a neutral sans" — Helvetica specifically, so that
+     two people running this on two prototypes get the same page back.
+     "Helvetica Neue" catches the macOS alias; Arial is the metrically
+     compatible Windows fallback and will not reflow the layout. Nothing
+     after that is a real choice, it is just a terminator. */
+  --wf-font: Helvetica, "Helvetica Neue", Arial, sans-serif;
 
   color-scheme: light;
 }
 
 /* ------------------------------------------------------------
    1. Typeface
-   One family, two weights. The type SCALE is left alone on
-   purpose: the relative sizes encode someone's intent about
-   hierarchy, and testing that intent is the whole point.
+   Helvetica, regular and bold. Nothing else, anywhere.
+
+   This is a specification, not a preference, and it is the part
+   of the reset that does the most work. A generated prototype
+   arrives with a display face nobody chose and four to six
+   weights nobody decided on. Both read to a reviewer as
+   "design", and both are load-bearing in the wrong way: weight
+   gets borrowed to fake an emphasis the structure has not
+   earned. Collapse the family to one and the weights to two and
+   whatever emphasis is still legible on the screen is emphasis
+   the structure actually produced.
+
+   The type SCALE is left alone on purpose. Relative size encodes
+   someone's intent about hierarchy, and testing that intent is
+   the whole point of the exercise. Family and weight are
+   normalised; size is evidence.
    ------------------------------------------------------------ */
 
 html.wireframe-mode,
-html.wireframe-mode * {
+html.wireframe-mode *,
+html.wireframe-mode *::before,
+html.wireframe-mode *::after {
   font-family: var(--wf-font) !important;
+
+  /* A variable font carries weight on an axis, so a prototype set in
+     Inter var at `font-variation-settings: 'wght' 550` leaks a fifth
+     weight straight past every font-weight rule below. Killing the axis
+     is the only thing that closes that hole.
+
+     The OpenType extras go with it. Alternate glyph sets, small caps,
+     slashed zeros and tabular figures are all visual decisions wearing
+     a typeface's clothes, and each one is something a reviewer can have
+     an opinion about. font-synthesis-weight stops the browser faking a
+     bold if only one Helvetica cut is installed. */
+  font-variation-settings: normal !important;
   font-feature-settings: normal !important;
+  font-synthesis-weight: none !important;
+  font-stretch: normal !important;
   letter-spacing: normal !important;
 }
 
-html.wireframe-mode :is(h1, h2, h3, h4, h5, h6, th, strong, b),
-html.wireframe-mode [class*="font-semibold"],
-html.wireframe-mode [class*="font-bold"],
-html.wireframe-mode [class*="font-black"] {
-  font-weight: 600 !important;
+/* Two weights, quantised at semibold.
+
+   Anything the prototype set below 600 — thin, light, regular, medium —
+   resolves to regular. Anything at 600 or above — semibold, bold, black —
+   resolves to bold. A threshold rather than a mapping, because the point
+   is to destroy the gradient: five weights arranged in a careful ramp is
+   a typographic system, and the exercise is to take the system away and
+   see what the structure does without it.
+
+   `!important` throughout, and deliberately. Section 3 of this file uses
+   `:where()` to score zero so the project keeps winning, which is right
+   for colour. It is wrong here. A 300 or a 500 surviving anywhere means
+   the ramp survived, and one surviving weight is enough to re-establish
+   the hierarchy the reviewer is supposed to be judging without it. */
+
+html.wireframe-mode,
+html.wireframe-mode *,
+html.wireframe-mode *::before,
+html.wireframe-mode *::after {
+  font-weight: 400 !important;
 }
 
-/* `:where()` rather than `:is()` on purpose. `:is()` takes the specificity
-   of its heaviest argument, so this rule would beat any single-class rule
-   the project uses to express emphasis and silently flatten the hierarchy
-   rule 3 says to keep. `:where()` scores zero, so the project still wins.
+/* Bold is for structural emphasis: the elements that mean emphasis in
+   the document rather than the ones that were painted to look like it.
 
-   `html:where(.wireframe-mode)` rather than `html.wireframe-mode` for the
-   same reason: the scoping class would otherwise contribute a class's worth
-   of specificity and beat `.logo { font-weight: 700 }` anyway. Scoped to
-   zero, this is a default that any project rule overrides, which is what a
-   default should be. */
-html:where(.wireframe-mode) :where(p, span, div, li, td, input, textarea, label, small) {
-  font-weight: 400;
+   The utility classes are enumerated because Tailwind writes weight into
+   the markup, where a rule about elements cannot reach it. `font-medium`
+   is absent on purpose — it is 500, it falls below the threshold, and it
+   is the class AI tools reach for by reflex on every label and button in
+   the app. Promoting it would make most of the page bold and tell you
+   nothing. */
+html.wireframe-mode :is(h1, h2, h3, h4, h5, h6, th, strong, b, dt, summary, legend, optgroup),
+html.wireframe-mode [class*="font-semibold"],
+html.wireframe-mode [class*="font-bold"],
+html.wireframe-mode [class*="font-extrabold"],
+html.wireframe-mode [class*="font-black"],
+html.wireframe-mode [data-wf-bold] {
+  font-weight: 700 !important;
+}
+
+/* Escape hatches, for section 8 and for the one case the rules above
+   genuinely get wrong.
+
+   That case: a prototype whose headings are `<div class="title">` with a
+   weight set in CSS. The universal rule flattens them to regular and the
+   enumerated list never picks them up, so the page arrives with no bold
+   anywhere. Add the project's own selectors to section 8 rather than
+   relaxing anything here — and note it, because a document that carries
+   its entire hierarchy in classes on generic elements has no semantic
+   structure at all. That is a finding in its own right, and a better one
+   than anything the wireframe was going to tell you. */
+html.wireframe-mode [data-wf-regular] {
+  font-weight: 400 !important;
 }
 
 /* ------------------------------------------------------------

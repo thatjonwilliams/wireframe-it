@@ -5,20 +5,35 @@ description: Strip a working prototype back to a neutral greyscale wireframe so 
 
 # Wireframe Review
 
-Turn a styled prototype into a greyscale wireframe that still runs, sitting behind a toggle so the original is one click away.
+Reset a styled prototype to a known neutral baseline that still runs, behind a toggle so the original is one click away. The output is a specification, not a look: the same prototype reset twice should arrive at the same page.
 
-## Why anyone would want this
+## The specification
 
-A prototype built with AI tools arrives fully dressed. It has a colour scheme, a typeface, gradients, shadows, an accent. Almost none of that was decided. It came from the model's defaults, from a one-line instruction ("make it clean and modern"), or from pointing at another product and saying "like that". The founder did not choose it so much as accept it.
+| | Target state | Source |
+|---|---|---|
+| Colour | Greyscale only, mapped to the 10-step ramp by lightness | Rule 1 |
+| Interaction | `#2563EB`, on interactive elements and nothing else | Rule 2 |
+| Typeface | Helvetica everywhere — headings, body, numerals, code | Rule 3 |
+| Weight | 400 and 700 only, quantised at 600 | Rule 3 |
+| Type scale | **Unchanged** | Rule 4 |
+| Layout, spacing, radii, borders, shadows | **Unchanged**, resolved to grey | Rule 4 |
+| Imagery | Labelled grey block at the original dimensions | Rule 5 |
+| Behaviour, routes, states | **Unchanged** and fully working | Rule 6 |
 
-That creates a specific problem in review. Everyone in the room can see the colour, so everyone comments on the colour. Meanwhile the things that decide whether the product works — what is on the screen, in what order, grouped how, leading where — go unexamined, because they are harder to see and harder to talk about.
+Everything in bold is preserved because it is the evidence. Everything else is removed because nobody decided it. Step 5 is how you prove the page actually reached this state rather than approximately resembling it.
 
-Removing the visual layer is not an aesthetic judgement. It is a way of forcing attention onto the part of the design that carries the argument. When the colour goes, hierarchy has to be carried by order, grouping, weight and space. If it cannot be, that is the finding.
+## Why
 
-Two consequences worth naming up front, because they are what makes the exercise pay:
+A prototype built with AI tools arrives fully dressed — a colour scheme, a typeface, gradients, an accent — and almost none of it was decided. It came from the model's defaults, from "make it clean and modern", or from pointing at another product. The founder accepted it rather than chose it.
 
-- **The interactive surface becomes a shape.** With only one colour left in the interface, every clickable thing lights up at once. People routinely discover a screen with nineteen interactive elements and no discernible primary action.
-- **Every place colour was doing load-bearing work becomes visible.** If a status can only be read as red, the design depends on colour to mean something. That is a real accessibility and comprehension risk that a styled review will never surface.
+That creates a specific problem. Everyone in the room can see the colour, so everyone comments on the colour, while the things that decide whether the product works — what is on the screen, in what order, grouped how, leading where — go unexamined.
+
+Two consequences are what make the exercise pay:
+
+- **The interactive surface becomes a shape.** With one colour left, every clickable thing lights up at once. People routinely find a screen with nineteen interactive elements and no discernible primary action.
+- **Colour doing load-bearing work becomes visible.** A status that can only be read as red is a comprehension and accessibility risk a styled review will never surface.
+
+And a second use, which for a team about to commission real design work is the larger one: the reset is a **blank slate with the structure still intact**. Layout, flow, states and copy survive; every arbitrary visual decision is gone. That is the boundary a design system wants to attach to. `references/rationale.md` has the full argument and the version to hand a sceptical stakeholder.
 
 ## The rules
 
@@ -32,23 +47,31 @@ The ramp in `assets/wireframe.css` gives you ten steps. Use it rather than inven
 
 ### 2. One blue, and only for things you can click
 
-Links, buttons, icon buttons, tabs, menu items, toggles, checkboxes, chips that filter, table rows that navigate, and any other element that responds to a click or a tap. Anything interactive gets the blue. Nothing else does, ever.
+Links, buttons, icon buttons, tabs, menu items, toggles, checkboxes, filter chips, navigating table rows. Anything that responds to a click or a tap gets the blue. Nothing else does, ever.
 
-The blue is `#2563EB`. It is not a brand colour and should not be treated as one. It should read as a browser default — the visual equivalent of an unstyled link. If someone in the review starts discussing whether they like the blue, it has failed at its job and should be made flatter, not prettier.
+The blue is `#2563EB`. It is not a brand colour and should not be treated as one — it should read as a browser default, the visual equivalent of an unstyled link. If someone starts discussing whether they like it, it has failed and should be made flatter, not prettier.
 
-Practical test for what counts as clickable: does it have an `href`, an `onClick`, a `role="button"`, or is it a native form control? If yes, it is blue. Decorative icons sitting inside a clickable parent do inherit the blue, because the whole target is the affordance.
+The test for clickable: does it have an `href`, an `onClick`, a `role="button"`, or is it a native form control? Decorative icons inside a clickable parent inherit the blue, because the whole target is the affordance. Disabled controls stay grey — that distinction is part of what you are trying to see.
 
-Interactive elements that are disabled stay grey. That distinction is part of what you are trying to see.
+**Where rules 1 and 2 collide, rule 2 wins.** A dark app bar mapped faithfully to a grey of the same lightness lands at roughly the luminance of the blue, and the links on it vanish. Two escapes, in order: on a filled button, move the blue to the surface and set the label white, which `wireframe.css` already does; on a dark container, mark it `data-wf-dark` and the blue lightens. Never solve it by letting the affordance go grey. An interactive element that does not read as interactive manufactures the very finding you are looking for, and that is the one failure the exercise cannot tolerate.
 
-**Where rules 1 and 2 collide, rule 2 wins.** A dark app bar or sidebar, mapped faithfully to a grey of the same lightness, lands at roughly the same luminance as the blue, and the links on it vanish. Two escapes, in order of preference: on a filled button, move the blue to the surface and set the label white, which `wireframe.css` already does; on a dark container, mark it `data-wf-dark` and the blue lightens. Never solve it by letting the affordance go grey. An interactive element that does not read as interactive is the one failure the exercise cannot tolerate, because it manufactures the very finding you are looking for.
+### 3. Helvetica, regular and bold. Nothing else
 
-### 3. One generic sans, and nothing else
+One family: Helvetica, falling back to Helvetica Neue then Arial. Everywhere — headings, body, numerals, code blocks, form controls, chart labels. Not "a neutral sans", not "pick one of these three". Helvetica specifically, because a specification that admits alternatives is a preference.
 
-Inter, Geist or Helvetica. Pick one and apply it everywhere, including headings, code blocks and numerals. The point is a typeface with no opinion. A distinctive display face is a brand decision wearing a font's clothes, and it will pull the review back toward the look.
+Two weights: 400 and 700, quantised at semibold. Anything the prototype set below 600 becomes regular; 600 and above becomes bold. A threshold, not a mapping — destroying the gradient is the point. Five weights in a careful ramp is a typographic system, and the exercise is to take the system away and see what the structure does without it.
 
-Keep the existing type scale. The relative sizes in the prototype encode someone's intent about hierarchy, and you are here to test that intent, not to overwrite it. Normalise the family and let the structure show.
+Three things leak past a naive `font-weight` rule. All three are common in generated prototypes and all three are handled in `wireframe.css` section 1:
 
-Restrict weights to two: a regular and one heavier. Six weights is a visual system, not a wireframe.
+- **Variable font axes.** `font-variation-settings: 'wght' 550` is a fifth weight no `font-weight` declaration can see.
+- **Tailwind weight utilities**, which live in the markup where a rule about elements cannot reach them. `font-medium` is deliberately not promoted: it is 500, below the threshold, and it is the class AI tools reach for on every label and button in the app.
+- **OpenType features** — small caps, tabular figures, stylistic alternates. Visual decisions wearing a typeface's clothes.
+
+Keep the type scale. Relative size encodes someone's intent about hierarchy, and you are testing that intent, not overwriting it.
+
+One case the spec gets wrong on purpose: headings built as `<div class="title">` arrive with no bold at all, because the element rule never picks them up. Add the project's selectors to section 8 rather than relaxing the spec — then report it, because a document carrying its whole hierarchy in classes on generic elements has no semantic structure, and that finding beats anything the wireframe was going to tell you.
+
+Toggle chrome is exempt and keeps its own face. Review tooling that matches the product gets reviewed as though it were the product.
 
 ### 4. Structure is preserved exactly
 
@@ -72,13 +95,13 @@ If a state is unreachable in the running prototype, say so in the report rather 
 
 ## Before any of this: can you see the code?
 
-Often you cannot. The prototype lives inside Lovable, Replit, v0, Bolt or Figma Make, and the person asking has never exported anything. Start at `references/getting-the-code.md`, which covers both routes: the cheap one that never leaves the platform, and the real export, per tool.
+Often you cannot. The prototype lives inside Lovable, Replit, v0, Bolt or Figma Make and the person asking has never exported anything. `references/getting-the-code.md` covers both routes: the cheap one that never leaves the platform, and the real export, per tool.
 
-Take the cheap route seriously rather than treating it as a fallback. `assets/harvest.js` is a console snippet that reports what a running page is actually made of — every colour and its frequency, the typefaces and weights, whether colour lives in tokens or utilities or hardcoded values, how many things are interactive and how many of those have no visual affordance. It is two to four kilobytes, it needs no export, no repository and no terminal, and it is enough to write a theme layer tailored to that specific prototype rather than the general-purpose one bundled here.
+Take the cheap route seriously rather than as a fallback. `assets/harvest.js` is a console snippet that reports what the running page is actually made of — every colour and its frequency, typefaces and weights, whether colour lives in tokens or utilities or hardcoded values, how many things are interactive and how many of those have no visual affordance. No export, no repository, no terminal, and enough to write a theme layer tailored to this prototype rather than the general-purpose one bundled here.
 
-It is also a finding in its own right. The `nonGrey` count is how many distinct non-grey colours the interface paints. Five to a dozen is a palette. Forty is an accumulation, and saying so out loud usually lands harder than anything that comes later.
+It is also a finding. `nonGrey` is how many distinct non-grey colours the interface paints. A dozen is a palette. Forty is an accumulation, and saying so usually lands harder than anything that comes later.
 
-Where you do have the code, run the harvest anyway. Source tells you what was intended; the harvest tells you what is on the screen, and the gap between those two is often the whole story.
+Where you do have the code, run the harvest anyway. Source tells you what was intended; the harvest tells you what is on the screen, and the gap is often the whole story.
 
 ## How to do it without destroying anything
 
