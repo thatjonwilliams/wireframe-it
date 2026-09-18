@@ -1,5 +1,5 @@
 /* ============================================================
-   Wireframe Review — self-test
+   Wireframe It — self-test
    ------------------------------------------------------------
    Load on the fixture page and call:
 
@@ -60,6 +60,15 @@
     var styledStyles = snapshot();
     var styledGeom = geometry();
     var styledHeight = document.documentElement.scrollHeight;
+
+    var authorInline = [];
+    (function walk(root) {
+      root.querySelectorAll('[style]').forEach(function (el) {
+        if (el.closest && el.closest('[data-wf-chrome]')) return;
+        authorInline.push({ el: el, css: el.getAttribute('style') });
+        if (el.shadowRoot) walk(el.shadowRoot);
+      });
+    })(document);
 
     // ---------- on ----------
     document.documentElement.classList.add(CLASS);
@@ -170,9 +179,30 @@
     var restored = snapshot();
 
     /* The promise the skill makes to a founder is that nothing they
-       built is lost. This is that promise, asserted. */
+       built is lost. This is that promise, asserted.
+
+       IMPORTANT: this only means anything on a FRESH page load. An earlier
+       version of it passed for days while the neutraliser was destroying
+       the fixture's inline styles, because the baseline snapshot was taken
+       after a previous toggle had already stripped them — the test was
+       comparing damage to damage. Reload before trusting a pass. */
     add('reverts exactly — nothing is destroyed', restored === styledStyles,
         restored === styledStyles ? '' : 'styled state did not come back identical');
+
+    /* The sharper version of the same thing, and the one that actually
+       caught it. The author's own `style` attribute must come back
+       character for character — including shorthands, which decompose and
+       lose their value if they are taken apart with removeProperty. */
+    var inlineIntact = true, inlineDetail = '';
+    authorInline.forEach(function (rec) {
+      var now = rec.el.getAttribute('style');
+      if (now !== rec.css) {
+        inlineIntact = false;
+        if (!inlineDetail) inlineDetail = (rec.css || '(none)') + '  ->  ' + (now || '(removed)');
+      }
+    });
+    add('author inline styles survive a cycle', inlineIntact,
+        inlineIntact ? authorInline.length + ' checked' : inlineDetail);
     add('no leftover markers in the DOM',
         document.querySelectorAll('[data-wf-neutralised]').length === 0,
         document.querySelectorAll('[data-wf-neutralised]').length + ' left behind');
@@ -180,7 +210,7 @@
     var pass = results.every(function (r) { return r.pass; });
     console.table(results);
     console.log(pass
-      ? '%c ALL PASS %c wireframe-review meets its specification on this fixture'
+      ? '%c ALL PASS %c wireframe-it meets its specification on this fixture'
       : '%c FAIL %c see the table above',
       pass ? 'background:#070;color:#fff' : 'background:#b00;color:#fff', '');
     return { pass: pass, results: results };

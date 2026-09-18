@@ -61,7 +61,7 @@ Read the first few numbers before you go any further. `colours.nonGrey` is the c
 
 Paste the harvest to Claude with this:
 
-> This is a harvest from my prototype, taken with the wireframe-review skill. Write me a wireframe theme layer for this specific project: a single CSS file scoped under `.wireframe-mode` on `<html>`, plus the toggle, following the skill's rules. Map every colour in the harvest to the grey ramp at roughly matching lightness, keep the interaction blue for clickable things only, and use the token names and class names that actually appear here rather than generic ones. Give me the file contents and exactly what to tell my platform's AI to do with them.
+> This is a harvest from my prototype, taken with the wireframe-it skill. Write me a wireframe theme layer for this specific project: a single CSS file scoped under `.wireframe-mode` on `<html>`, plus the toggle, following the skill's rules. Map every colour in the harvest to the grey ramp at roughly matching lightness, keep the interaction blue for clickable things only, and use the token names and class names that actually appear here rather than generic ones. Give me the file contents and exactly what to tell my platform's AI to do with them.
 
 Because the layer is written from what the page actually contains, it is short — usually well under a hundred lines — rather than the general-purpose sheet the skill ships. That matters for the next step, since you have to paste it into a chat box.
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   Wireframe Review — the neutraliser
+   Wireframe It — the neutraliser
    ------------------------------------------------------------
    Load this after wireframe.css and wireframe-toggle.js.
 
@@ -207,6 +207,32 @@
 
   var touched = [];
 
+  /* The author's own `style` attribute, captured verbatim before this file
+     writes anything to an element, and restored verbatim on revert.
+
+     The obvious implementation — setProperty on the way in, removeProperty
+     on the way out — silently destroys the prototype. removeProperty does
+     not know or care who set the declaration, so an element that arrived
+     with style="color:#16a34a" loses that colour permanently the first time
+     wireframe mode is switched off. Shorthands are worse: the author writes
+     `background:#34d399`, this file sets `background-color`, and removing it
+     decomposes the shorthand and drops the value. On the test fixture all
+     three avatars came back the same colour.
+
+     Restoring the whole attribute handles shorthands, priorities and
+     declaration order in one move, and it is the only version of this that
+     honours what the skill promises a founder: nothing you built is lost.
+
+     One consequence, and it is the right trade: inline styles written by the
+     app itself WHILE wireframe mode is on are dropped at revert. A framework
+     re-applies those on its next render, whereas an author's original
+     declaration is gone for good once removeProperty has had it. */
+  var originalStyle = new Map();
+
+  function remember(el) {
+    if (!originalStyle.has(el)) originalStyle.set(el, el.getAttribute('style'));
+  }
+
   function neutraliseEl(el) {
     if (el.closest && el.closest('[data-wf-chrome]')) return;
 
@@ -216,6 +242,7 @@
     for (var i = 0; i < PROPS.length; i++) {
       var next = neutraliseValue(computed.getPropertyValue(PROPS[i]));
       if (next === null) continue;
+      remember(el);
       el.style.setProperty(PROPS[i], next, 'important');
       wrote = true;
     }
@@ -246,10 +273,13 @@
 
   function revert() {
     touched.forEach(function (el) {
-      PROPS.forEach(function (p) { el.style.removeProperty(p); });
+      var original = originalStyle.get(el);
+      if (original === null || original === undefined) el.removeAttribute('style');
+      else el.setAttribute('style', original);
       el.removeAttribute(MARK);
     });
     touched = [];
+    originalStyle.clear();
     unadopt();
   }
 
@@ -423,17 +453,14 @@
             var bgIsDark = luminance(bg) < 0.4;
 
             if (bgIsDark) {
-              el.style.setProperty('background-color', rgb(BLUE), 'important');
-              el.style.setProperty('color', rgb(OFF_WHITE), 'important');
-              mark(el);
+              write(el, 'background-color', rgb(BLUE));
+              write(el, 'color', rgb(OFF_WHITE));
             } else {
-              el.style.setProperty('background-color', rgb(OFF_WHITE), 'important');
-              mark(el);
+              write(el, 'background-color', rgb(OFF_WHITE));
             }
           } else {
             var g = greyForContrast(bg, need);
-            el.style.setProperty('color', rgb([g, g, g]), 'important');
-            mark(el);
+            write(el, 'color', rgb([g, g, g]));
           }
         }
       }
@@ -449,8 +476,7 @@
         if (contrast([bc.r, bc.g, bc.b], surround) < AA_UI) {
           var bv = greyForContrast(surround, AA_UI);
           ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color']
-            .forEach(function (p) { el.style.setProperty(p, rgb([bv, bv, bv]), 'important'); });
-          mark(el);
+            .forEach(function (p) { write(el, p, rgb([bv, bv, bv])); });
         }
       }
     }
@@ -458,6 +484,14 @@
 
   function mark(el) {
     if (!el.hasAttribute(MARK)) { el.setAttribute(MARK, ''); touched.push(el); }
+  }
+
+  /* Every write outside neutraliseEl goes through here, so there is one
+     place that cannot forget to capture the original first. */
+  function write(el, prop, value) {
+    remember(el);
+    el.style.setProperty(prop, value, 'important');
+    mark(el);
   }
 
   /* ---------- dark containers ----------
@@ -501,8 +535,7 @@
         var own = ownOpaqueBackground(node);
         if (own) {
           if (luminance(own) < 0.25) {
-            node.style.setProperty('background-color', rgb(LIFT), 'important');
-            mark(node);
+            write(node, 'background-color', rgb(LIFT));
           }
           break;
         }

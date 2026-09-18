@@ -1,9 +1,9 @@
 ---
-name: wireframe-review
+name: wireframe-it
 description: Reset a working prototype to a neutral greyscale wireframe — Helvetica, two weights, one interaction blue, structure untouched — so stakeholders review function, hierarchy and flow rather than the look, and so real design work starts from a clean foundation. Applies a non-destructive theme layer, a neutraliser and an on-page toggle, then verifies the result against the specification. Nothing the user built is lost. Use whenever someone wants to pressure-test or sign off a prototype's structure rather than its appearance; whenever reviews stall on colour or branding; whenever a Lovable, Replit, v0, Bolt, Figma Make or Claude-built prototype needs its product logic assessed before a visual system is applied; whenever someone asks to de-style, neutralise, greyscale, lo-fi, reset, normalise or wireframe an app, page or screen, or to strip generated styling back to a blank slate; and whenever someone asks why their MVP tests badly despite looking finished.
 ---
 
-# Wireframe Review
+# Wireframe It
 
 Reset a styled prototype to a known neutral baseline that still runs, behind a toggle so the original is one click away. The output is a specification, not a look: the same prototype reset twice should arrive at the same page.
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   Wireframe Review — the switcher
+   Wireframe It — the switcher
    ------------------------------------------------------------
    Flips `wireframe-mode` on <html> and remembers the choice.
    No reload, no route change, no state lost: a reviewer can be

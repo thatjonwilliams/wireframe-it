@@ -1,5 +1,5 @@
 /* ============================================================
-   Wireframe Review — palette harvest
+   Wireframe It — palette harvest
    ------------------------------------------------------------
    Paste this into the browser console on a running prototype.
    It reports what the page is actually made of: the colours in

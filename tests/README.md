@@ -28,7 +28,7 @@ The assets are symlinked into `fixture/`, so the fixture always exercises the cu
 ## Running
 
 ```bash
-python3 -m http.server 8777 --directory ~/.claude/skills/wireframe-review/tests/fixture
+python3 -m http.server 8777 --directory ~/.claude/skills/wireframe-it/tests/fixture
 ```
 
 Open `http://localhost:8777`, then in the console:

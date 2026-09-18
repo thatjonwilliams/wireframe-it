@@ -1,5 +1,5 @@
 /* ============================================================
-   Wireframe Review — verifier
+   Wireframe It — verifier
    ------------------------------------------------------------
    Paste into the console with wireframe mode ON. It checks the
    running page against the specification in SKILL.md and prints
