@@ -45,7 +45,9 @@ From a Claude Code session with the browser tools, the same thing in one call:
 const r = await wfSelfTest(); JSON.stringify(r.results.map(x => `${x.pass ? 'PASS' : 'FAIL'} ${x.test} ${x.detail}`))
 ```
 
-There is a `wireframe-fixture` entry in this project's `.claude/launch.json` that starts the server on the right directory.
+If you are in a project whose `.claude/launch.json` you do not mind editing, a `wireframe-fixture` entry
+pointing `python3 -m http.server` at `--directory <this folder>` lets `preview_start` open it directly.
+Worth adding to a scratch project rather than to client work, where it would show up in the diff.
 
 ## What the assertions cover
 
