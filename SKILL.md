@@ -43,9 +43,9 @@ These are deliberately tight. The output should read as a systematic transformat
 
 ### 1. Everything resolves to greyscale
 
-White, black, and greys in between. Backgrounds, text, borders, dividers, shadows, icons, chart fills, avatars, badges. Map each original colour to a grey of roughly equivalent lightness so the original contrast relationships survive. Do not flatten everything to one grey; a wireframe with no tonal structure is as useless as one with too much colour.
+Off-white, off-black, and greys in between. Backgrounds, text, borders, dividers, shadows, icons, chart fills, avatars, badges. Map each original colour to a grey of roughly equivalent lightness so the original contrast relationships survive. Do not flatten everything to one grey; a wireframe with no tonal structure is as useless as one with too much colour.
 
-The ramp in `assets/wireframe.css` gives you ten steps. Use it rather than inventing values.
+The ramp in `assets/wireframe.css` gives you ten steps, `#FAFAFA` to `#121212`. Use it rather than inventing values. The ends stop short of `#FFFFFF` and `#000000` on purpose: pure black on pure white is harsher than anything a real interface does, and a wireframe that is uncomfortable to look at gets read as a statement about the design rather than as a neutral instrument.
 
 ### 1b. Right angles
 
