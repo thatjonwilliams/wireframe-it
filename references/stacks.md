@@ -198,3 +198,24 @@ Turn wireframe mode on and run this in the console. It reports every element pai
 It outlines the first forty in magenta so you can see where they are on the page. Run it on every main screen, not just the first: leaks cluster in the screens nobody demoed.
 
 Two things it cannot see, so check them by eye. Emoji are full-colour glyphs and no CSS colour property describes them. And anything drawn into a `<canvas>` is a bitmap, not styled elements, so section 5 is the only route there.
+
+---
+
+## 8. Shadow DOM
+
+The hole that no amount of section 8 CSS closes, and the one most likely to be missed, because the component keeps working and simply keeps its own styling.
+
+A stylesheet scoped to `html.wireframe-mode` **cannot match inside a shadow root**. Within that tree scope `html` is not an ancestor, so every rule misses and the component renders exactly as it always did. Nothing warns you. On a page where most of the interface is light DOM, a single untouched widget reads as an oversight rather than a boundary.
+
+Anything built on Lit, Stencil or Shoelace is affected, as are most design-system web components and a good deal of embedded third-party UI.
+
+`assets/wireframe-neutralise.js` handles this. It walks shadow roots alongside the light DOM, and adopts a copy of the wireframe sheet into each one with the scope prefix stripped.
+
+Two details in that rewrite are worth knowing, because both fail silently:
+
+- **The prefix is stripped from descendant selectors and replaced with `:host` on the bare one.** `html.wireframe-mode, html.wireframe-mode *` is the selector list carrying the whole typography spec. Strip it blindly and the first item becomes empty, the selector list becomes invalid, and the browser drops the entire rule — so the shadow root keeps its original typeface while everything else conforms.
+- **Roots under `[data-wf-chrome]` are excluded.** The toggle mounts its own control in a shadow root precisely so the theme layer cannot reach it. Adopting into every root indiscriminately reaches past that and repaints the review chrome in the product's wireframe styling, which is the confusion the shadow root existed to prevent.
+
+Closed-mode shadow roots (`attachShadow({mode:'closed'})`) are genuinely unreachable — `element.shadowRoot` returns null and there is no way in from outside. Rare in application code, occasional in third-party embeds. If `verify.js` reports a region it cannot see, or you can see colour that nothing flags, suspect a closed root and say so in the report rather than working around it.
+
+Cross-origin iframes are unreachable for the same practical reason. Neither CSS nor script crosses that boundary. Report it.

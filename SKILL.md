@@ -1,6 +1,6 @@
 ---
 name: wireframe-review
-description: Strip a working prototype back to a neutral greyscale wireframe so stakeholders can review function, hierarchy and flow without being distracted by visual design. Applies a non-destructive theme layer plus an on-page toggle between the current design and the wireframe, so nothing the user built is lost or overwritten. Use this whenever someone wants to review, pressure-test or get sign-off on a prototype's structure rather than its look; whenever design reviews keep stalling on colour, branding or "I'm not sure about the blue"; whenever a Lovable, Replit, v0, Bolt, Figma Make or Claude-built prototype needs its product logic assessed before a visual system is applied; whenever someone asks to de-style, neutralise, greyscale, lo-fi or wireframe an existing app, page or screen; and whenever someone asks how to tell whether their prototype's hierarchy actually works or why their MVP tests badly despite looking finished.
+description: Reset a working prototype to a neutral greyscale wireframe — Helvetica, two weights, one interaction blue, structure untouched — so stakeholders review function, hierarchy and flow rather than the look, and so real design work starts from a clean foundation. Applies a non-destructive theme layer, a neutraliser and an on-page toggle, then verifies the result against the specification. Nothing the user built is lost. Use whenever someone wants to pressure-test or sign off a prototype's structure rather than its appearance; whenever reviews stall on colour or branding; whenever a Lovable, Replit, v0, Bolt, Figma Make or Claude-built prototype needs its product logic assessed before a visual system is applied; whenever someone asks to de-style, neutralise, greyscale, lo-fi, reset, normalise or wireframe an app, page or screen, or to strip generated styling back to a blank slate; and whenever someone asks why their MVP tests badly despite looking finished.
 ---
 
 # Wireframe Review
@@ -73,11 +73,15 @@ One case the spec gets wrong on purpose: headings built as `<div class="title">`
 
 Toggle chrome is exempt and keeps its own face. Review tooling that matches the product gets reviewed as though it were the product.
 
-### 4. Structure is preserved exactly
+### 4. Structure is preserved
 
 Layout, spacing, corner radii, borders, rules, dividers, shadows, component composition, breakpoints. All of it stays as the prototype has it, resolved to greyscale. The wireframe should be recognisable as the same product, screen for screen.
 
-This is what separates the exercise from a redesign. You are subtracting one variable so the rest can be judged. If you start moving things around, you have confounded the experiment and the review is worthless.
+This is what separates the exercise from a redesign. You are subtracting one variable so the rest can be judged. Start moving things around and you have confounded the experiment; no finding from the session can then be attributed to anything.
+
+One exception, and it is forced by rule 3: **a typeface has metrics, so text boxes change width.** Replacing the prototype's font with Helvetica is not free. On the test fixture the `h1` text box narrows by 11px. What must not change is vertical position: a line wrapping where it did not before genuinely alters the page being judged, whereas a text box being a few pixels narrower is invisible to a reviewer.
+
+The self-test holds the line in exactly those terms — vertical shift within 2px, document height within 4px, horizontal reflow allowed. If a screen fails it, the usual cause is text that was already one word from wrapping, and the honest fix is to report it rather than to relax the typography.
 
 ### 5. Imagery is replaced, not hidden
 
@@ -105,58 +109,65 @@ Where you do have the code, run the harvest anyway. Source tells you what was in
 
 ## How to do it without destroying anything
 
-The person you are helping is working inside Lovable, Replit, v0, Bolt or similar. Branching is the developer's answer and it is the wrong answer here: it pulls them out of the tool they are actually using and leaves them managing two versions of a thing they are still changing daily.
+The person you are helping is working inside Lovable, Replit, v0, Bolt or similar. Branching is the developer's answer and it is the wrong one here: it pulls them out of the tool they are actually using and leaves them managing two versions of something they are still changing daily.
 
-Use a theme layer and a toggle instead. Both states live in one running app and the switch is instant.
+Use a theme layer and a toggle instead. Both states live in one running app and the switch is instant. Phrase every instruction to the tool as *adding files and one import* — these tools are good at additive changes and unreliable at sweeping edits, and additive is what keeps it reversible.
 
 ### Step 1 — Find where colour is decided
 
-Before changing anything, work out how the prototype expresses colour. The harvest answers this directly in its `stack` section; if you have not run it, the answer is one of:
+Work out how the prototype expresses colour before changing anything. The harvest answers this directly in its `stack` section. The answer is one of: **custom properties** on `:root` or a theme object (the good case — override in one place); **Tailwind utilities** written into the markup, common in AI-built apps; **hardcoded hex** scattered through inline styles and components (the messy case); or **a component library theme**, which usually reduces to custom properties underneath.
 
-- **CSS custom properties** on `:root` or a theme object. The best case. You override in one place.
-- **Tailwind utility classes** written literally into the markup (`bg-blue-600`, `text-slate-400`). Common in AI-built apps. Handled with a CSS layer that overrides the utilities under a scope class, not by rewriting every className.
-- **Hardcoded hex values** scattered through inline styles and component files. The messy case.
-- **A component library theme** (shadcn/ui, MUI, Chakra). Usually reduces to custom properties underneath.
+`references/stacks.md` has the override technique for each, plus the tool-specific notes for Lovable, Replit, v0 and Bolt. Use the scoped-override approach rather than find-and-replace: find-and-replace is destructive, misses things, and cannot be undone with a click.
 
-Read `references/stacks.md` for the override technique for each. It matters that you use the scoped-override approach rather than find-and-replace: find-and-replace is destructive, misses things, and cannot be undone with a click.
+### Step 2 — Add the theme layer and the neutraliser
 
-**If the colours turn out to be scattered and hardcoded, say so plainly.** The effort required to strip the styling is a direct measure of how little system the prototype has. A codebase where this takes ten minutes has a design system in embryo. One where it takes hours does not have one at all, and that is worth the founder knowing, because the same absence is what will make every future change expensive. Do not bury this in the work; it is one of the more useful things the exercise reveals.
+Copy `assets/wireframe.css` into the project and import it once, globally. It defines the grey ramp, the interaction blue, the typography spec and a set of token overrides, all scoped under `.wireframe-mode` on `<html>`. Nothing applies until that class is present, so adding the file changes nothing on its own.
 
-### Step 2 — Add the wireframe theme layer
+**Then copy `assets/wireframe-neutralise.js` and load it too. This is not optional.** The stylesheet reaches colour two ways — design-token overrides, and selectors you add in section 8 — and neither is general. A prototype that writes `background:#1e1b4b` into a class, or `style="color:#16a34a"` into the markup, is untouched by both, which describes most generated prototypes. Measured on `tests/fixture`: the stylesheet alone leaves **72 rule-1 violations on one screen** while passing rule 3 completely. With the neutraliser, zero. Ship the CSS on its own and the page looks broadly grey, the founder believes the exercise ran, and the leaks sit on the screens nobody demoed.
 
-Copy `assets/wireframe.css` into the project and import it once, globally. It defines the grey ramp, the interaction blue, the typeface and a set of overrides, all scoped under `.wireframe-mode` on the `<html>` element. Nothing applies until that class is present, so adding the file changes nothing on its own.
+The neutraliser reads each element's computed colour and writes back the grey of equivalent luminance — equivalent luminance, not a flat grey, so contrast relationships survive as rule 1 requires. It skips the interaction blue by value wherever it finds it, which keeps rule 2 intact. It crosses shadow roots, watches for DOM changes so routed apps neutralise screens reached later, and tracks every property it writes so switching off restores the styled state exactly.
 
-If the prototype writes colour into the markup as Tailwind utilities, which most v0 and Lovable output does, also copy `assets/wireframe-tailwind.css` and import it immediately after. It is long and enumerated rather than clever, for a reason the file explains. Skip it for any other stack.
+For Tailwind, also copy `assets/wireframe-tailwind.css` and import it immediately after the base sheet. Skip it for any other stack.
 
-Then extend it for the project's specifics: whatever selectors, utilities or custom properties this particular prototype uses. Put those in section 8 at the bottom of the file, inside the `.wireframe-mode` scope. Never edit the prototype's own styles.
-
-The base sheet is written with `:where()` and guarded attribute selectors throughout, which score zero or close to it, so an ordinary `html.wireframe-mode .your-class` rule in section 8 will win without needing tricks. If an override is not taking effect, check the cascade before reaching for a doubled class: something else in the project is probably using `!important`.
+Then extend the sheet for this project's specifics in section 8, inside the `.wireframe-mode` scope. Never edit the prototype's own styles. The base sheet uses `:where()` throughout, so an ordinary `html.wireframe-mode .your-class` rule in section 8 wins without tricks; if an override is not taking, something else is probably using `!important`.
 
 ### Step 3 — Add the toggle
 
-Copy `assets/wireframe-toggle.js` and mount it. It renders a small fixed control in the bottom right that flips `.wireframe-mode` on `<html>`, remembers the choice, and also responds to Alt+W. It lives in a shadow root so the theme layer cannot reach it: review chrome that restyles itself along with the product is confusing, and chrome that looks like part of the product gets reviewed as though it were.
+Copy `assets/wireframe-toggle.js` and mount it — a script tag before `</body>` for plain HTML, or the React component version at the bottom of the same file. It renders a small fixed control that flips `.wireframe-mode` on `<html>`, remembers the choice, and responds to Alt+W.
 
-Bottom right by default because top right is where products put their account menu and their primary action, and the one thing the control must not do is cover the thing under review. Move it if the prototype has something there instead.
+It lives in a shadow root so the theme layer cannot reach it. Review chrome that restyles itself along with the product is confusing, and chrome that looks like part of the product gets reviewed as though it were.
 
-For a React project there is a component version in the same file. For a plain HTML prototype, a script tag before `</body>` is enough.
+Bottom right by default, because top right is where products put their account menu and their primary action, and the control must not cover the thing under review. Move it if the prototype has something there — on mobile layouts it usually does, since that corner is where the floating action button lives.
 
-Two details that matter in review: the toggle should be reachable from every screen, and switching should not reload or reset state. A stakeholder mid-task needs to flip to the styled version, ask "is that the same screen?", and flip back without losing their place.
+Two details that matter in review: the toggle must be reachable from every screen, and switching must not reload or reset state. A stakeholder mid-task needs to flip to the styled version, ask "is that the same screen?", and flip back without losing their place.
 
-### Step 4 — Sweep for colour that escaped
+### Step 4 — Check what the neutraliser cannot reach
 
-The theme layer will not catch everything. Check these, in this order, because they are the usual survivors:
+Three things are outside the reach of both the stylesheet and the neutraliser, because they are not styled DOM at all. Deal with them by hand before verifying:
 
-1. Inline `style` attributes with literal colours.
-2. `fill` and `stroke` on inline SVG, including icon sets.
-3. Canvas and chart library configs, which take colours as JavaScript values, not CSS.
-4. Images and gradients used as CSS backgrounds.
-5. `box-shadow` with a tinted colour rather than a neutral.
-6. Focus rings, selection highlights, scrollbars and other browser-default accents.
-7. Emoji, which are full colour and will survive anything you do in CSS.
+1. **Canvas and chart library configs**, which take colours as JavaScript values. `references/stacks.md` § 5.
+2. **CSS background images.** An `<img>` is caught automatically; a `background: url(...)` is not, because CSS cannot select an element by the value of its computed background. Mark those by hand with `data-wf-placeholder="Hero image"`. Grep the stylesheets for `url(` and you have the list in seconds.
+3. **Emoji**, which are full-colour glyphs that survive anything done in CSS.
 
-A fast check: turn the wireframe on and screenshot each main screen. Any colour that is not the interaction blue is a leak. `references/stacks.md` has a short script for flagging non-greyscale computed styles if the app is large.
+Everything else — inline styles, hardcoded class colours, gradients, tinted shadows, SVG fill and stroke, focus rings, scrollbars, shadow roots — the neutraliser handles. That was not true of earlier versions of this skill, which asked you to sweep all of it manually; if you have run this before, that step is gone.
 
-### Step 5 — Report what the wireframe showed
+### Step 5 — Verify against the specification
+
+Do not skip this and do not substitute looking at the screen. "It looks greyscale" is not a result. A prototype can be clean on the screen you demoed and leaking on the three you did not, and the leaks cluster precisely there.
+
+Turn wireframe mode on and run `assets/verify.js` in the console **on every main screen**. It checks the running page against the specification and reports pass or fail per rule, with the offending elements, outlining the first sixty in magenta so you can see where they are. It walks shadow roots as well as the light DOM.
+
+The bar is zero violations on rules 1, 2, 3 and 5. Anything else is not done.
+
+Rules 4 and 6 cannot be checked by a script and the verifier says so rather than printing a green tick it has not earned. Compare screenshots for rule 4; click through for rule 6.
+
+What the verifier still cannot see, so check by eye:
+
+- **Emoji.** Full-colour glyphs; no CSS colour property describes them.
+- **Canvas.** A bitmap, not styled elements. Chart libraries take colours as JavaScript values — `references/stacks.md` § 5.
+- **Anything in a cross-origin iframe.** Neither CSS nor script reaches into it. Say so in the report rather than working around it.
+
+### Step 6 — Report what the wireframe showed
 
 The transformation is the setup. This is the part that produces the value. Write a short, plain list covering:
 
@@ -166,6 +177,7 @@ The transformation is the setup. This is the part that produces the value. Write
 - Groups that read as related when coloured but fall apart when neutral, usually because the grouping was carried by a tint rather than by proximity or a container.
 - Screens carrying more than one idea, visible now that a shared background is no longer holding them together.
 - Any interactive element you could not reach or exercise.
+- **How much work section 8 took.** This is a finding, not housekeeping. A prototype where the overrides took ten minutes has a design system in embryo; one where they took hours does not have one at all, and the same absence is what will make every future change expensive. Do not bury it.
 
 Keep it descriptive. The reviewer's job is to decide what to do about these; yours is to make them visible.
 
