@@ -11,8 +11,8 @@ Reset a styled prototype to a known neutral baseline that still runs, behind a t
 
 | | Target state | Source |
 |---|---|---|
-| Colour | Greyscale only, mapped to the 10-step ramp by lightness | Rule 1 |
-| Interaction | `#2563EB`, on interactive elements and nothing else | Rule 2 |
+| Colour | Greyscale only, `#FAFAFA` to `#121212`, mapped by lightness | Rule 1 |
+| Interaction | `#256BED` — one value, on interactive elements and nothing else | Rule 2 |
 | Typeface | Helvetica everywhere — headings, body, numerals, code | Rule 3 |
 | Weight | 400 and 700 only, quantised at 600 | Rule 3 |
 | Corners | Right angles — radius removed everywhere | Rule 1b |
@@ -61,11 +61,27 @@ Applied to everything rather than to a list of containers. Pills, badges, avatar
 
 Links, buttons, icon buttons, tabs, menu items, toggles, checkboxes, filter chips, navigating table rows. Anything that responds to a click or a tap gets the blue. Nothing else does, ever.
 
-The blue is `#2563EB`. It is not a brand colour and should not be treated as one — it should read as a browser default, the visual equivalent of an unstyled link. If someone starts discussing whether they like it, it has failed and should be made flatter, not prettier.
+The blue is `#256BED`, and it is the **only** non-grey value in the wireframe. Not a hover variant, not a lighter one for dark surfaces, not a pale tint for selected rows. Four blues in a greyscale wireframe are a palette, which is the exact thing the exercise removes. The self-test counts distinct non-grey colours rendered and fails at two.
+
+It is not a brand colour — it should read as a browser default, the visual equivalent of an unstyled link. If someone starts discussing whether they like it, it has failed and should be made flatter, not prettier. But keep its luminance if you change it, because the contrast guarantee in rule 7 rests on it.
+
+**The blue changes form, not value.** No colour clears 4.5:1 as text on both `#FAFAFA` and `#121212` — that window is arithmetically empty, and it is why the variants existed. What closes it is that an affordance does not have to stay text:
+
+| Context | Form | |
+|---|---|---|
+| Light surface | blue text | 4.57:1 |
+| Element owning a dark surface | blue surface, `#FAFAFA` label | 4.57:1 |
+| That blue chip against `#121212` | boundary | 3.93:1 |
+
+One value covers all three, because blue text on off-white and an off-white label on blue have the identical contrast requirement.
 
 The test for clickable: does it have an `href`, an `onClick`, a `role="button"`, or is it a native form control? Decorative icons inside a clickable parent inherit the blue, because the whole target is the affordance. Disabled controls stay grey — that distinction is part of what you are trying to see.
 
-**Where rules 1 and 2 collide, rule 2 wins.** A dark app bar mapped faithfully to a grey of the same lightness lands at roughly the luminance of the blue, and the links on it vanish. Two escapes, in order: on a filled button, move the blue to the surface and set the label white, which `wireframe.css` already does; on a dark container, mark it `data-wf-dark` and the blue lightens. Never solve it by letting the affordance go grey. An interactive element that does not read as interactive manufactures the very finding you are looking for, and that is the one failure the exercise cannot tolerate.
+**Where rules 1 and 2 collide, rule 2 wins.** A dark app bar mapped faithfully to a grey of the same lightness lands near the luminance of the blue, and the links on it vanish. The blue never moves to resolve this; the grey does, and `wireframe-neutralise.js` does it automatically — the old `data-wf-dark` attribute is gone, because it needed someone to remember to tag every dark container and nobody did.
+
+A dark panel whose links have no surface of their own is **lifted to a light grey**. What a dark sidebar does structurally is separate navigation from content, and a light panel does that just as well; the darkness itself is arbitrary generated styling. The alternative — inverting every link to a blue chip — is compliant and absurd, turning the whole navigation into a slab in which every item appears selected, a stronger claim than the real interface was making. An element that genuinely owns a dark surface still inverts, and for a filled button or an active nav item that is the correct reading.
+
+Never solve any of this by letting the affordance go grey. An interactive element that does not read as interactive manufactures the very finding you are looking for, and that is the one failure the exercise cannot tolerate.
 
 ### 3. Helvetica, regular and bold. Nothing else
 
@@ -117,17 +133,19 @@ Neutralising by luminance preserves the prototype's contrast relationships faith
 
 That is not a cosmetic defect, it is a broken instrument. The exercise exists to reveal where a design leans on colour to carry meaning. If the wireframe is itself hard to read, every hesitation in the session becomes ambiguous — the participant may have stalled on the structure, or because they could not see the text. The finding is lost either way, and the one it manufactures is worse than none.
 
-`wireframe-neutralise.js` enforces this automatically, in a fixed order of remedy:
+`wireframe-neutralise.js` enforces this automatically. **The blue is a constant; the grey moves.** In order:
 
-1. **Switch the blue variant.** On a dark surface the interaction blue goes to the light variant. This is what the stylesheet's `data-wf-dark` escape does by hand, and what nobody remembers to tag — the fixture's sidebar failed for exactly that reason.
-2. **Lighten the control's surface.** A mid-grey button with a blue label is the common case; lightening the button fixes it and leaves the label alone.
-3. **Adjust the blue itself**, keeping the hue so the element still reads as interactive.
+1. **Lift dark containers.** A dark panel holding links with no surface of their own goes to light grey, before anything else is measured.
+2. **Lighten the control's own surface.** A mid-grey button with a blue label is the common case; lightening the button fixes it and leaves the label alone.
+3. **Invert.** An element that genuinely owns a dark surface takes the blue as its background with an off-white label.
 
 Grey text is fixed by moving the text, not the surface, so the prototype's surfaces stay where the neutraliser put them.
 
+There is deliberately **no step that derives a new blue**. An earlier version had one, and it was the source of the problem this rule now prevents: it emitted shades that were not the interaction blue, needed an attribute to stop later passes greying them, and read on the screen as a second and third blue.
+
 **Rule 2 outranks this rule.** The blue is never traded for a grey to win a contrast argument. If an affordance cannot be made to pass, that is a finding to report, not a thing to paint over.
 
-Two consequences worth expecting. Derived blues are marked `data-wf-blue` so the verifier accepts them and later passes do not grey them — an unmarked derived blue gets neutralised on the next DOM change and the affordance quietly disappears mid-review. And AA here is a floor for the *wireframe*, not a claim about the product: the styled version is a separate question, and one the exercise often raises.
+AA here is a floor for the *wireframe*, not a claim about the product. The styled version is a separate question — and one the exercise usually raises, since a design that needed this much correcting in neutral form rarely passes in colour either.
 
 ## Before any of this: can you see the code?
 

@@ -13,8 +13,13 @@
 html.wireframe-mode {
   /* Grey ramp. Ten steps, roughly even in lightness, so you can
      map any original colour to a grey of similar tone and keep
-     the prototype's contrast relationships intact. */
-  --wf-0:  #ffffff;
+     the prototype's contrast relationships intact.
+
+     The ends are off-white and off-black rather than #fff and #000.
+     Pure black on pure white is harsher than anything a real interface
+     does, and a wireframe that is uncomfortable to look at gets read as
+     a statement about the design rather than as a neutral instrument. */
+  --wf-0:  #fafafa;
   --wf-1:  #f7f7f8;
   --wf-2:  #ededee;
   --wf-3:  #dcdcde;
@@ -23,21 +28,49 @@ html.wireframe-mode {
   --wf-6:  #6e6e76;
   --wf-7:  #4a4a51;
   --wf-8:  #2d2d33;
-  --wf-9:  #131316;
+  --wf-9:  #121212;
 
-  /* The one permitted colour. Interaction only. It should read
-     as a system default, not a choice. If a reviewer starts
-     having opinions about it, flatten it further. */
-  --wf-interactive: #2563eb;
-  --wf-interactive-hover: #1d4ed8;
-  --wf-interactive-subtle: #eff4fe;
+  /* The one permitted colour, and it really is one value. There is no
+     hover blue, no on-dark blue and no subtle blue tint: four blues in a
+     greyscale wireframe read as a palette, which is the exact thing the
+     exercise removes. Hover is expressed with an underline, and a dark
+     surface no longer needs its own variant — see below.
 
-  /* On a dark surface the interaction blue is invisible: mapped to an
-     equivalent-lightness grey, a dark app bar sits at roughly the same
-     luminance as the blue itself. Rule 2 wins over rule 1 in that case.
-     Apply this variant to interactive elements on any surface darker
-     than --wf-5. */
-  --wf-interactive-on-dark: #93b4fb;
+     #256BED is not an aesthetic pick, it is the one that makes a single
+     blue possible at all.
+
+     No colour whatsoever clears 4.5:1 as TEXT on both #fafafa and
+     #121212 — that window is empty, and it is why four blues existed
+     here before. What closes it is that the affordance does not have to
+     stay text. Blue text on off-white and an off-white label on a blue
+     surface have the identical contrast requirement, so one value covers
+     both, and the blue changes form rather than value:
+
+       blue text on #fafafa ......... 4.57:1   (AA)
+       #fafafa label on blue ........ 4.57:1   (AA)
+       blue surface against #121212 . 3.93:1   (AA for a UI boundary)
+
+     On a light surface the blue is the text. On a dark surface it becomes
+     the surface and the label goes off-white. Same blue throughout.
+
+     It should read as a system default, not a choice. If a reviewer starts
+     having opinions about it, flatten it further — but keep the luminance,
+     or the contrast guarantee goes with it. */
+  --wf-interactive: #256bed;
+
+  /* Kept as names so existing section 8 overrides do not break. Both
+     resolve to the one blue. */
+  --wf-interactive-hover: var(--wf-interactive);
+
+  /* Formerly a lighter blue for dark surfaces. The single blue clears AA
+     on black, so the variant is gone and this is an alias. What changed
+     is the remedy: instead of lightening the blue to suit the surface,
+     the surface moves to suit the blue. */
+  --wf-interactive-on-dark: var(--wf-interactive);
+
+  /* Formerly a pale blue tint used as a selected/hover surface. A blue
+     surface is a second blue however pale it is, so it is a grey now. */
+  --wf-interactive-subtle: var(--wf-1);
 
   /* Helvetica. Not "a neutral sans" — Helvetica specifically, so that
      two people running this on two prototypes get the same page back.
@@ -280,13 +313,15 @@ html.wireframe-mode :where(a[href], button, [role="button"], [role="tab"],
   color: var(--wf-interactive) !important;
 }
 
-/* Interactive elements sitting on a dark surface. Tag the container with
-   data-wf-dark and the blue lightens enough to be seen. See the note on
-   --wf-interactive-on-dark above. */
-html.wireframe-mode [data-wf-dark] :where(a[href], button, [role="button"],
-  [role="tab"], [role="menuitem"], summary) {
-  color: var(--wf-interactive-on-dark) !important;
-}
+/* The data-wf-dark escape used to live here: a hand-applied attribute
+   that swapped in a lighter blue on dark containers. It is gone, and not
+   because it stopped working — because it required someone to remember to
+   tag every dark container, and nobody did. On the test fixture the
+   sidebar failed WCAG at 2.2:1 for exactly that reason.
+
+   The single blue clears AA on black, and wireframe-neutralise.js moves
+   any surface that would not clear it. Nothing to tag. */
+
 
 /* Filled buttons: the blue moves to the surface, the label goes white.
    Detected by the usual utility and token names — extend as needed. */

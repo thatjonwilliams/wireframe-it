@@ -125,6 +125,32 @@
         Array.from(weights).every(function (w) { return w === '400' || w === '700'; }),
         Array.from(weights).sort().join(', '));
 
+    /* ---------- one blue ----------
+       The assertion that answers "these look like multiple blues". It
+       counts distinct non-grey values actually RENDERED, so it catches a
+       second blue however it arrives: a hover variant, an on-dark variant,
+       a pale tint used as a surface, or a shade derived at runtime to
+       clear a contrast threshold. All four existed here at one point. */
+    var nonGrey = new Set();
+    var COLOUR_PROPS = ['color', 'backgroundColor', 'borderTopColor',
+                        'borderBottomColor', 'fill', 'stroke', 'outlineColor'];
+    (function walk(root) {
+      root.querySelectorAll('*').forEach(function (el) {
+        if (el.closest && el.closest('[data-wf-chrome]')) return;
+        var cs = getComputedStyle(el);
+        COLOUR_PROPS.forEach(function (p) {
+          var m = String(cs[p]).match(/\d+/g);
+          if (!m || m.length < 3) return;
+          var r = +m[0], g = +m[1], b = +m[2];
+          if (Math.max(r, g, b) - Math.min(r, g, b) < 12) return;
+          nonGrey.add('rgb(' + r + ',' + g + ',' + b + ')');
+        });
+        if (el.shadowRoot) walk(el.shadowRoot);
+      });
+    })(document);
+    add('exactly one non-grey colour renders', nonGrey.size === 1,
+        nonGrey.size + ': ' + Array.from(nonGrey).join(' '));
+
     // ---------- right angles, checked directly ----------
     var radii = new Set();
     (function walk(root) {

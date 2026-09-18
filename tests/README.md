@@ -37,7 +37,7 @@ Open `http://localhost:8777`, then in the console:
 await wfSelfTest()
 ```
 
-Fourteen assertions, printed as a table. The bar is all pass.
+Fifteen assertions, printed as a table. The bar is all pass.
 
 From a Claude Code session with the browser tools, the same thing in one call:
 
@@ -59,6 +59,7 @@ Worth adding to a scratch project rather than to client work, where it would sho
 | rules 1, 1b, 2, 3, 5, 7 — zero violations | any override that stops matching |
 | only one corner radius renders, and it is zero | a radius surviving in a shadow root or utility class |
 | rule 7 — WCAG AA contrast | the wireframe becoming unreadable and confounding the session |
+| exactly one non-grey colour renders | a second blue arriving as a hover, on-dark, tint or runtime-derived shade |
 | exactly one typeface renders | a font leak, including from a shadow root |
 | at most two weights render | a weight leak, including a variable-font axis |
 | reverts exactly | the non-destructive promise, which is the one made to the founder |
@@ -77,7 +78,8 @@ Before rule 7 existed, the wireframe **failed WCAG AA in nine places on this fix
 Two regressions were caught here and are worth knowing about, because both were silent:
 
 - Solving for the exact contrast ratio and rounding to an integer sRGB channel lands *just* under the target. Three elements came out at 4.49 against 4.5 — fine to the eye, failing to an auditor. The solver now verifies after rounding and steps until it genuinely clears.
-- A blue derived to clear a contrast threshold is not one of the stylesheet's four blues, so the next neutralise pass greyed it, and the contrast pass was then satisfied because grey-on-light passes contrast perfectly well. The affordance disappeared on the next DOM change. Derived blues now carry `data-wf-blue`, and the verifier skips `color` plus every property that defaults to `currentColor` on those elements — `column-rule-color` was the one that actually bit.
+- A blue derived to clear a contrast threshold is not one of the stylesheet's blues, so the next neutralise pass greyed it, and the contrast pass was then satisfied because grey-on-light passes contrast perfectly well. The affordance disappeared on the next DOM change. This was first patched with a `data-wf-blue` attribute; the derivation was then removed altogether, since the derived shades were themselves the "multiple blues" problem. The blue is now a constant and contrast is reached by moving the grey.
+- Lifting dark containers replaced an earlier remedy that inverted every link on a dark surface into a blue chip. It passed all fifteen assertions and looked absurd: the entire sidebar became a blue slab in which every item appeared selected. Assertions do not see that, which is why the fixture is worth looking at as well as measuring.
 
 ## The measurement worth keeping
 

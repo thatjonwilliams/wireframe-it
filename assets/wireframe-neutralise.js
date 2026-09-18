@@ -62,17 +62,17 @@
     'caret-color', 'column-rule-color', 'box-shadow'
   ];
 
-  /* The four values from wireframe.css section 4. A value already at one
-     of these was painted by the interaction layer, so leaving it alone is
-     what keeps rule 2 intact. Writing grey over it would be inline and
-     important, which beats the stylesheet, and the affordance would
-     vanish — the one failure the exercise cannot tolerate.
+  /* The one value from wireframe.css. A colour already at it was painted
+     by the interaction layer, so leaving it alone is what keeps rule 2
+     intact. Writing grey over it would be inline and important, which
+     beats the stylesheet, and the affordance would vanish — the one
+     failure the exercise cannot tolerate.
 
      A prototype whose own brand colour is exactly #2563EB survives here
      too. That is the right outcome: it is indistinguishable from the
      interaction blue on the screen, so it is indistinguishable to the
      reviewer as well. */
-  var WF_BLUES = [[37, 99, 235], [29, 78, 216], [147, 180, 251], [239, 244, 254]];
+  var WF_BLUES = [[37, 107, 237]];   // #256BED — the only one
 
   function isInteractionBlue(r, g, b) {
     for (var i = 0; i < WF_BLUES.length; i++) {
@@ -213,10 +213,7 @@
     var computed = getComputedStyle(el);
     var wrote = false;
 
-    var keepsBlue = el.hasAttribute('data-wf-blue');
-
     for (var i = 0; i < PROPS.length; i++) {
-      if (keepsBlue && PROPS[i] === 'color') continue;
       var next = neutraliseValue(computed.getPropertyValue(PROPS[i]));
       if (next === null) continue;
       el.style.setProperty(PROPS[i], next, 'important');
@@ -251,7 +248,6 @@
     touched.forEach(function (el) {
       PROPS.forEach(function (p) { el.style.removeProperty(p); });
       el.removeAttribute(MARK);
-      el.removeAttribute('data-wf-blue');
     });
     touched = [];
     unadopt();
@@ -283,8 +279,8 @@
 
   var AA_TEXT = 4.5, AA_LARGE = 3, AA_UI = 3;
 
-  var BLUE = [37, 99, 235];
-  var BLUE_ON_DARK = [147, 180, 251];
+  var BLUE = [37, 107, 237];       // #256BED
+  var OFF_WHITE = [250, 250, 250]; // --wf-0
 
   function parseColour(v) {
     if (!v) return null;
@@ -358,26 +354,17 @@
     return dir < 0 ? 0 : 255;
   }
 
-  /* A blue at a target luminance, by mixing toward white or black.
-     Keeps the hue so the element still reads as interactive, which
-     is the constraint that makes this preferable to giving up and
-     painting the text grey. */
-  function blueForContrast(bg, ratio) {
-    var lb = luminance(bg);
-    for (var i = 0; i <= 20; i++) {
-      var t = i / 20;
-      var up = [BLUE[0] + (255 - BLUE[0]) * t, BLUE[1] + (255 - BLUE[1]) * t, BLUE[2] + (255 - BLUE[2]) * t];
-      if (contrast(up, bg) >= ratio && lb < 0.5) return up.map(Math.round);
-      var down = [BLUE[0] * (1 - t), BLUE[1] * (1 - t), BLUE[2] * (1 - t)];
-      if (contrast(down, bg) >= ratio && lb >= 0.5) return down.map(Math.round);
-    }
-    return null;
-  }
+  /* There is deliberately no function here that derives a blue at some
+     other luminance. An earlier version had one, and it was the source of
+     the thing this pass is supposed to prevent: it emitted shades like
+     rgb(35, 94, 223) that were not the interaction blue, had to be tracked
+     with an attribute so later passes would not grey them, and read on the
+     screen as a second and third blue. Four blues in a greyscale wireframe
+     are a palette, which is the exact thing the exercise removes.
 
-  function isBlueish(c) {
-    return isInteractionBlue(c[0], c[1], c[2]) ||
-      (Math.abs(c[2] - BLUE_ON_DARK[2]) < 10 && c[2] > c[0] && c[2] > c[1]);
-  }
+     The blue is now a constant. Contrast is reached by moving the grey. */
+
+  function isBlueish(c) { return isInteractionBlue(c[0], c[1], c[2]); }
 
   function requiredRatio(style) {
     var size = parseFloat(style.fontSize) || 16;
@@ -414,42 +401,34 @@
         if (contrast(fgc, bg) < need) {
           if (isBlueish(fgc)) {
             /* Rule 2 outranks everything: the element must still read as
-               interactive, so the blue is never traded for a grey.
+               interactive, so the blue is never traded for a grey — and,
+               now, never traded for a different blue either.
 
-               Order of remedy. First the on-dark variant, which is what
-               the stylesheet's data-wf-dark escape does by hand and which
-               nobody remembers to tag. Then, for a control that paints its
-               own surface, lighten the surface — a mid-grey button with a
-               blue label is the case that prompted this, and lightening
-               the button is the fix that leaves the label alone. Only then
-               adjust the blue itself. */
-            if (contrast(BLUE_ON_DARK, bg) >= need) {
-              el.style.setProperty('color', rgb(BLUE_ON_DARK), 'important');
-              el.setAttribute('data-wf-blue', '');
-              mark(el);
-            } else if (hasOwnSurface(el)) {
-              var v = greyForContrast(BLUE, need);
-              el.style.setProperty('background-color', rgb([v, v, v]), 'important');
+               The blue is fixed, so the grey moves. Two forms:
+
+               On a light-ish surface, put the element's own surface at the
+               light end of the ramp. A mid-grey button with a blue label is
+               the case that prompted this, and lightening the button is the
+               fix that leaves the label alone.
+
+               On a dark surface there is no grey that works — no colour
+               clears 4.5:1 as text on both #fafafa and #121212 — so the
+               affordance inverts: the blue becomes the surface and the
+               label goes off-white. Same blue, different form, and the
+               contrast requirement turns out to be identical. */
+            /* By now liftDarkContainers has lightened any dark panel whose
+               links have no surface of their own, so anything still sitting
+               on a dark background genuinely owns it — a dark filled button.
+               Those invert, and inverting is the right look for them. */
+            var bgIsDark = luminance(bg) < 0.4;
+
+            if (bgIsDark) {
+              el.style.setProperty('background-color', rgb(BLUE), 'important');
+              el.style.setProperty('color', rgb(OFF_WHITE), 'important');
               mark(el);
             } else {
-              var nb = blueForContrast(bg, need);
-              if (nb) {
-                el.style.setProperty('color', rgb(nb), 'important');
-                /* Flagged, not just painted. A derived blue is not in the
-                   stylesheet's list of four, so on the next pass the
-                   neutraliser would read it as an ordinary chromatic value
-                   and grey it — and the contrast pass would then be happy,
-                   because grey-on-light passes contrast perfectly well. The
-                   affordance would disappear on a DOM change, silently, some
-                   minutes into a review.
-
-                   Widening the blue test to a hue band would also fix that,
-                   and would break something worse: every blue in a
-                   blue-branded prototype would survive rule 1. Marking what
-                   we painted keeps the distinction exact. */
-                el.setAttribute('data-wf-blue', '');
-                mark(el);
-              }
+              el.style.setProperty('background-color', rgb(OFF_WHITE), 'important');
+              mark(el);
             }
           } else {
             var g = greyForContrast(bg, need);
@@ -481,6 +460,58 @@
     if (!el.hasAttribute(MARK)) { el.setAttribute(MARK, ''); touched.push(el); }
   }
 
+  /* ---------- dark containers ----------
+     A dark app bar or sidebar full of plain links is the hardest case in
+     the whole specification, and the obvious remedies are both wrong.
+
+     Inverting each link to a blue chip is compliant and looks absurd:
+     the entire navigation becomes a solid blue slab in which every item
+     appears selected, which is a stronger visual claim than anything the
+     real interface was making. Leaving blue text on the dark surface is
+     3.9:1 — fine for a UI boundary, short of AA for body text.
+
+     So the container moves instead. What a dark sidebar is doing
+     structurally is separating navigation from content, and a light grey
+     panel does that just as well; the darkness itself is the arbitrary
+     generated styling this whole exercise exists to remove. Lifting it to
+     --wf-2 keeps the separation, keeps the layout, and lets the one blue
+     work as text.
+
+     Only containers holding interactive elements that have no surface of
+     their own. A dark hero with a filled button is left alone — that
+     button inverts cleanly and reads correctly. */
+
+  var LIFT = [237, 237, 238];   // --wf-2
+
+  function ownOpaqueBackground(el) {
+    var c = parseColour(getComputedStyle(el).backgroundColor);
+    return (c && c.a >= 0.999) ? [c.r, c.g, c.b] : null;
+  }
+
+  function liftDarkContainers(root) {
+    var links = root.querySelectorAll(
+      'a[href], button, [role="button"], [role="link"], [role="tab"], [role="menuitem"]');
+    for (var i = 0; i < links.length; i++) {
+      var el = links[i];
+      if (el.closest && el.closest('[data-wf-chrome]')) continue;
+      if (ownOpaqueBackground(el)) continue;        // has its own surface: inverts instead
+
+      var node = el.parentElement;
+      while (node && node.nodeType === 1) {
+        var own = ownOpaqueBackground(node);
+        if (own) {
+          if (luminance(own) < 0.25) {
+            node.style.setProperty('background-color', rgb(LIFT), 'important');
+            mark(node);
+          }
+          break;
+        }
+        var r = node.getRootNode && node.getRootNode();
+        node = node.parentElement || (r && r.host) || null;
+      }
+    }
+  }
+
   function contrastPass(root) {
     var els = root.querySelectorAll('*');
     for (var i = 0; i < els.length; i++) {
@@ -508,6 +539,7 @@
          reads computed styles, so it has to see the neutralised colours
          and the blue the stylesheet paints — not the originals. */
       walk(document);
+      liftDarkContainers(document);
       contrastPass(document);
     } finally { running = false; }
   }

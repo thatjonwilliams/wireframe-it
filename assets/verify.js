@@ -23,12 +23,11 @@
 
 (() => {
   // ---------- the spec ----------
-  const BLUES = [
-    [37, 99, 235],    // --wf-interactive
-    [29, 78, 216],    // --wf-interactive-hover
-    [147, 180, 251],  // --wf-interactive-on-dark
-    [239, 244, 254],  // --wf-interactive-subtle
-  ];
+  /* One value, and the check is exact on purpose. A hue band would also
+     accept the blue, and would additionally accept every blue a
+     blue-branded prototype already had — which is the leak rule 1 exists
+     to catch. */
+  const BLUES = [[37, 107, 237]];   // #256BED
   const FAMILIES = ['helvetica', 'helvetica neue', 'arial', 'sans-serif'];
   const WEIGHTS = ['400', '700'];
   const AA_TEXT = 4.5, AA_LARGE = 3;
@@ -83,12 +82,6 @@
   const failures = [];
 
   // ---------- rule 1 + 2: colour ----------
-  const CURRENT_COLOUR_PROPS = [
-    'color', 'borderTopColor', 'borderRightColor', 'borderBottomColor',
-    'borderLeftColor', 'outlineColor', 'textDecorationColor',
-    'columnRuleColor', 'caretColor', 'textEmphasisColor',
-  ];
-
   const COLOUR_PROPS = [
     'color', 'backgroundColor', 'backgroundImage', 'borderTopColor',
     'borderRightColor', 'borderBottomColor', 'borderLeftColor',
@@ -98,15 +91,7 @@
 
   visible.forEach(({ el, inShadow }) => {
     const s = getComputedStyle(el);
-    /* An element the neutraliser marked carries a blue derived from the
-       interaction blue to clear a contrast threshold — same hue, a few
-       percent lighter or darker. It is the spec's own output, not a leak. */
-    const derivedBlue = el.hasAttribute('data-wf-blue');
     COLOUR_PROPS.forEach(prop => {
-      /* `color` plus every property that DEFAULTS to currentColor. Miss one
-         and it reports the derived blue back as a leak, having inherited it:
-         column-rule-color is the one that actually did. */
-      if (derivedBlue && CURRENT_COLOUR_PROPS.includes(prop)) return;
       const v = s[prop];
       if (!v || v === 'none') return;
       for (const m of v.matchAll(/rgba?\(([^)]+)\)/g)) {
@@ -125,7 +110,6 @@
     '[role="checkbox"], [role="switch"], [role="option"], [onclick], [tabindex]:not([tabindex="-1"])';
 
   const paintsBlue = el => {
-    if (el.hasAttribute && el.hasAttribute('data-wf-blue')) return true;
     const s = getComputedStyle(el);
     return ['color', 'backgroundColor', 'borderTopColor', 'fill', 'stroke', 'outlineColor']
       .some(p => isBlue(parse(s[p])));
