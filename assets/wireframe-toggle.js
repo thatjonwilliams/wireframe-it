@@ -31,6 +31,7 @@
   function apply(on) {
     document.documentElement.classList.toggle(CLASS, on);
     try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
+    rendered = on;
     var el = document.getElementById('wf-toggle');
     if (el) render(el, on);
   }
@@ -79,12 +80,39 @@
       'font-family:Inter,Helvetica,Arial,sans-serif'
     ].join(';');
     document.body.appendChild(root);
-    render(root, isOn());
+    rendered = document.documentElement.classList.contains(CLASS);
+    render(root, rendered);
   }
 
   // Set the class before first paint so the wireframe does not
   // flash the styled version on load.
   if (isOn()) document.documentElement.classList.add(CLASS);
+
+  /* Reflect the class, not just the button that was pressed.
+     The control used to repaint itself only from apply(), so anything
+     else that set the class — a script, a test harness, another tab's
+     storage event, a framework restoring a route — left the label
+     reading "Design" over a page that was plainly a wireframe. In a
+     review that is worse than cosmetic: the one piece of chrome whose
+     entire job is to tell you which state you are in was lying about it.
+
+     Guarded on the rendered state, because plenty of apps write to the
+     class list on <html> constantly (theme switches, scroll locks,
+     route classes) and rebuilding the shadow DOM on each one would be
+     wasteful and would drop focus from the buttons. */
+  var rendered = null;
+
+  function sync() {
+    var on = document.documentElement.classList.contains(CLASS);
+    if (on === rendered) return;
+    rendered = on;
+    var el = document.getElementById('wf-toggle');
+    if (el) render(el, on);
+  }
+
+  new MutationObserver(sync).observe(document.documentElement, {
+    attributes: true, attributeFilter: ['class']
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', mount);
